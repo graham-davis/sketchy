@@ -50,4 +50,8 @@ private:
     vector<int> cursors;
     
     vector<bool> playTexture;
+    
+    vector<ofColor> colors;
+    
+    ofTrueTypeFont	verdana30;
 };

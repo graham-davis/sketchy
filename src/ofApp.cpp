@@ -5,9 +5,18 @@ void ofApp::setup(){
     // Initialize audio variables
     soundStream.setup(this, MY_CHANNELS, MY_CHANNELS, MY_SRATE, MY_BUFFERSIZE, MY_NBUFFERS);
     audioReady = false;
+    numTextures = 3;
+
+    colors.resize(numTextures);
+    colors[0] = ofColor(242, 95, 92);
+    colors[1] = ofColor(255, 224, 102);
+    colors[2] = ofColor(36, 123, 160);
+    
     
     // Read audio files into buffers
     readFiles();
+    
+    ofSetFrameRate(20);
 }
 
 //--------------------------------------------------------------
@@ -17,6 +26,12 @@ void ofApp::update(){
 
 //--------------------------------------------------------------
 void ofApp::draw(){
+    for (int i = 0; i < numTextures; i++) {
+        if (playTexture[i]) {
+            ofSetColor(colors[i]);
+            ofDrawCircle(ofRandom(0,ofGetWindowWidth()), ofRandom(0,ofGetWindowHeight()), ofRandom(10, 50));
+        }
+    }
 
 }
 
@@ -104,7 +119,6 @@ void ofApp::readFiles(){
     stk::Stk::setSampleRate(MY_SRATE);
     
     // Resize file/signal vectors
-    numTextures = 3;
     files.resize(numTextures);
     textures.resize(numTextures);
     cursors.resize(numTextures);
