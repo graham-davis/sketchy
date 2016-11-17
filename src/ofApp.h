@@ -66,8 +66,6 @@ private:
     vector<ofRectangle> textureBoxes;
     int selectedTexture;
     
-    bool drawGrid;
-    
     // Brush variables
     ofPath brush;
     float brushRadius;
@@ -80,8 +78,13 @@ private:
     // Top nav variables
     float topNavHeight;
     ofImage tileIcon;
+    ofImage settingsIcon;
     float tileIconHeight;
+    bool drawGrid;
+    bool drawSettings;
+    
     ofRectangle tileGhost;
+    ofRectangle settingsGhost;
     
     // Toolbox variables
     float toolboxHeight;
@@ -105,4 +108,6 @@ private:
     int maxDrawnElements;
     int elementsDrawn;
     vector<pixel> pixels;
+    bool explodingPixels;
+    float explodeRatio;
 };

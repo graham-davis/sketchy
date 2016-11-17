@@ -9,6 +9,7 @@ void ofApp::setup(){
     
     // Initialize top nav variables
     tileIcon.load(ofToDataPath("tile.png", true));
+    settingsIcon.load(ofToDataPath("settings.png", true));
     tileIconHeight = 50;
     
     // Initialize program colors
@@ -27,20 +28,19 @@ void ofApp::setup(){
     // Initialize GUI varialbes
     ww = 0;
     wh = 0;
-    bufferWidth = 8;
-    bufferHeight = 4;
+    bufferWidth = 16;
+    bufferHeight = 8;
     
     topNavHeight = 100;
     
     toolboxHeight = 220;
     toolboxWidth = ww-(bufferWidth*8);
-    textureBoxWidth = (toolboxWidth/(2*numTextures)) - (2*bufferWidth);
+    textureBoxWidth = (toolboxWidth/2)/numTextures - (bufferWidth);
     selectedTexture = -1;
     
     drawGrid = false;
+    drawSettings = true;
     
-    topNav = ofRectangle(0, 0, ww, topNavHeight);
-    toolbox = ofRectangle(bufferWidth*4, wh-toolboxHeight, ww-(bufferWidth*8), toolboxHeight);
     textureBoxes.resize(numTextures);
     
     // Initialize font
@@ -57,6 +57,8 @@ void ofApp::setup(){
     maxDrawnElements = 10000;
     elementsDrawn = 0;
     pixels.resize(10000);
+    explodingPixels = false;
+    explodeRatio = 1.0;
     
     // Read audio files into buffers
     readFiles();
@@ -72,11 +74,22 @@ void ofApp::update(){
     mouseX = ofGetMouseX();
     mouseY = ofGetMouseY();
     
+    toolboxHeight = wh * .15;
+    
     // Handle whether we can draw based on mouse location
-    if (toolbox.inside(mouseX, mouseY) || mouseY <= topNavHeight) {
+    if ((drawSettings && toolbox.inside(mouseX, mouseY)) || mouseY <= topNavHeight) {
         canDraw = false;
     } else {
         canDraw = true;
+    }
+    
+    if (explodingPixels) {
+        explodeRatio -= 0.025;
+        if (explodeRatio < 0.025) {
+            explodeRatio = 1.0;
+            explodingPixels = false;
+            elementsDrawn = 0;
+        }
     }
     
     // If drawing is allowed and mouse is down, add pixel
@@ -97,7 +110,7 @@ void ofApp::draw(){
     if (drawGrid) drawFullGrid();
     drawPixels();
     drawTopNav();
-    drawToolbox();
+    if (drawSettings) drawToolbox();
     
     
     // Only draw brush if texture is selected
@@ -111,7 +124,7 @@ void ofApp::drawPixels() {
     for(int i=0; i<elementsDrawn; i++) {
         pixel curPixel = pixels[i];
         ofSetColor(curPixel.color);
-        ofDrawCircle(curPixel.x*ww, curPixel.y*wh, curPixel.radius);
+        ofDrawCircle(curPixel.x*ww, curPixel.y*wh, curPixel.radius*explodeRatio);
     }
 }
 
@@ -119,7 +132,7 @@ void ofApp::drawFullGrid() {
     ofSetColor(100, 100, 100, 80);
     for(int i=0; i<20; i++) {
         // Vertical lines
-        ofDrawLine((ww/20)*i, topNavHeight, (ww/20)*i, wh-toolboxHeight);
+        ofDrawLine((ww/20)*i, topNavHeight, (ww/20)*i, wh);
         
         // Horizontal lines
         ofDrawLine(0, (topNavHeight+(wh*(i+1))/20), ww, (topNavHeight+(wh*(i+1))/20));
@@ -130,12 +143,22 @@ void ofApp::drawTopNav() {
     ofSetColor(offWhite);
     topNav.set(0, 0, ww, topNavHeight);
     tileGhost.set(ww-tileIconHeight-bufferWidth*2, (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
+    settingsGhost.set(ww-(tileIconHeight*2)-(bufferWidth*4), (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
+
     ofDrawRectangle(topNav);
     ofDrawRectangle(tileGhost);
+    ofDrawRectangle(settingsGhost);
+    
     ofSetColor(colors[0]);
     verdana.drawString("Sketchy", bufferWidth*2, (topNavHeight/2)+20);
     if (!drawGrid) ofSetColor(lightGrey);
     tileIcon.draw(ww-tileIconHeight-bufferWidth*2, (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
+    if (!drawSettings) {
+        ofSetColor(lightGrey);
+    } else {
+        ofSetColor(colors[0]);
+    }
+    settingsIcon.draw(ww-(tileIconHeight*2)-(bufferWidth*4), (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
 }
 
 void ofApp::drawToolbox() {
@@ -153,15 +176,16 @@ void ofApp::drawToolbox() {
         } else {
             ofSetColor(colors[i], 180);
         }
-        textureBoxes[i].set(toolboxCenter[0]+(textureBoxWidth*i)+(bufferWidth*(i+1)), wh-(toolboxHeight-bufferHeight), textureBoxWidth, toolboxHeight-(2*bufferHeight));
+        textureBoxes[i].set(toolboxCenter[0]+(textureBoxWidth*(i))+(bufferWidth*(i+1)), wh-(toolboxHeight-2*bufferHeight), textureBoxWidth, toolboxHeight-(4*bufferHeight));
         ofDrawRectangle(textureBoxes[i]);
     }
 }
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
-    if (key==127) {
-        elementsDrawn = 0;
+    if (key==127 && !explodingPixels) {
+        explodingPixels = true;
+        explodeRatio = 1.0;
     }
 }
 
@@ -183,14 +207,20 @@ void ofApp::mouseDragged(int x, int y, int button){
 //--------------------------------------------------------------
 void ofApp::mousePressed(int x, int y, int button){
     mouseDown = true;
-    for(int i=0; i<numTextures; i++) {
-        if (textureBoxes[i].inside(x, y)) {
-            selectedTexture = (selectedTexture == i) ? -1 : i;
+    if (drawSettings) {
+        for (int i=0; i<numTextures; i++) {
+            if (textureBoxes[i].inside(x, y)) {
+                selectedTexture = (selectedTexture == i) ? -1 : i;
+            }
         }
     }
     
-    if(tileGhost.inside(x, y)) {
+    if (tileGhost.inside(x, y)) {
         drawGrid = !drawGrid;
+    }
+    
+    if (settingsGhost.inside(x, y)) {
+        drawSettings = !drawSettings;
     }
     
     if (canDraw && selectedTexture != -1) {
@@ -235,14 +265,19 @@ void ofApp::dragEvent(ofDragInfo dragInfo){
 
 //----------------------Audio Methods---------------------------
 void ofApp::audioOut(float * output, int bufferSize, int nChannels){
-    if (audioReady && files.size() == numTextures) {
+    if (audioReady && files.size() == numTextures && cursors.size() == numTextures) {
         float left = 0;
         float right = 0;
         for (int i = 0; i < bufferSize; i++) {
             for (int j = 0; j < numTextures; j++) {
-                if (playTexture[j] && cursors[j] < files[j].getSize()) {
-                    left = textures[j](cursors[j], 0);
-                    right = textures[j](cursors[j], 1);
+                if (playTexture[j]) {
+                    int start = (mouseX / ww) * files[j].getSize();
+                    int end = start + brushRadius*100;
+                    if(cursors[j]+start > end || cursors[j]+start > files[j].getSize()) {
+                        cursors[j] = 0;
+                    }
+                    left = textures[j](cursors[j]+start, 0);
+                    right = textures[j](cursors[j]+start, 1);
                     cursors[j]++;
                 }
             }
@@ -280,3 +315,4 @@ void ofApp::readFiles(){
     
     audioReady = true;
 }
+
