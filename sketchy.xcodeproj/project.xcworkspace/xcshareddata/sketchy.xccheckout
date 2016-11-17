@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>C0086275-7196-4184-A1F0-39A7BBB46AC5</string>
+	<key>IDESourceControlProjectName</key>
+	<string>sketchy</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>192F4CCC344A5EC7213FED87B7747C79C0B22CC4</key>
+		<string>https://github.com/graham-davis/sketchy.git</string>
+		<key>E5DA4D92130C7B723FB350437C3985BBF83F9A93</key>
+		<string>https://github.com/Ahbee/ofxStk</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>sketchy.xcodeproj</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>192F4CCC344A5EC7213FED87B7747C79C0B22CC4</key>
+		<string>../..</string>
+		<key>E5DA4D92130C7B723FB350437C3985BBF83F9A93</key>
+		<string>../../../addons/ofxStk</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>https://github.com/graham-davis/sketchy.git</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>111</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>192F4CCC344A5EC7213FED87B7747C79C0B22CC4</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.git</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>E5DA4D92130C7B723FB350437C3985BBF83F9A93</string>
+			<key>IDESourceControlWCCName</key>
+			<string>ofxStk</string>
+		</dict>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.git</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>192F4CCC344A5EC7213FED87B7747C79C0B22CC4</string>
+			<key>IDESourceControlWCCName</key>
+			<string>sketchy</string>
+		</dict>
+	</array>
+</dict>
+</plist>

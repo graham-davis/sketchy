@@ -36,22 +36,73 @@ public:
 private:
     // Private member functions
     void readFiles();
+    void drawTopNav();
+    void drawToolbox();
+    void drawFullGrid();
+    void drawPixels();
     
     // Private variables
     bool audioReady;
     ofSoundStream soundStream;
     
+    // Mouse Variables
+    float mouseX;
+    float mouseY;
+    
+    // Texture variables
     int numTextures;
-    
     vector<stk::StkFrames> textures;
-    
     vector<stk::FileWvIn> files;
-    
     vector<int> cursors;
-    
     vector<bool> playTexture;
     
+    // GUI/Color Variables
     vector<ofColor> colors;
+    ofColor offWhite;
+    ofColor lightGrey;
     
-    ofTrueTypeFont	verdana30;
+    ofRectangle topNav;
+    ofRectangle toolbox;
+    vector<ofRectangle> textureBoxes;
+    int selectedTexture;
+    
+    bool drawGrid;
+    
+    // Brush variables
+    ofPath brush;
+    float brushRadius;
+    
+    float ww;
+    float wh;
+    float bufferWidth;
+    float bufferHeight;
+    
+    // Top nav variables
+    float topNavHeight;
+    ofImage tileIcon;
+    float tileIconHeight;
+    ofRectangle tileGhost;
+    
+    // Toolbox variables
+    float toolboxHeight;
+    float toolboxWidth;
+    float textureBoxWidth;
+    
+    // Font variables
+    ofTrueTypeFont verdana;
+    
+    // Define a pixel struct
+    struct pixel {
+        float x;
+        float y;
+        float radius;
+        ofColor color;
+    };
+    
+    // Drawing variables
+    bool canDraw;
+    bool mouseDown;
+    int maxDrawnElements;
+    int elementsDrawn;
+    vector<pixel> pixels;
 };

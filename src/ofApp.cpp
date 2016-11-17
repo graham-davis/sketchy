@@ -5,49 +5,169 @@ void ofApp::setup(){
     // Initialize audio variables
     soundStream.setup(this, MY_CHANNELS, MY_CHANNELS, MY_SRATE, MY_BUFFERSIZE, MY_NBUFFERS);
     audioReady = false;
-    numTextures = 3;
-
+    numTextures = 5;
+    
+    // Initialize top nav variables
+    tileIcon.load(ofToDataPath("tile.png", true));
+    tileIconHeight = 50;
+    
+    // Initialize program colors
     colors.resize(numTextures);
     colors[0] = ofColor(242, 95, 92);
     colors[1] = ofColor(255, 224, 102);
     colors[2] = ofColor(36, 123, 160);
+    colors[3] = ofColor(112, 193, 179);
+    colors[4] = ofColor(80, 81, 79);
+    offWhite = ofColor(240, 240, 240);
+    lightGrey = ofColor(220, 220, 220);
     
+    mouseX = 0;
+    mouseY = 0;
+    
+    // Initialize GUI varialbes
+    ww = 0;
+    wh = 0;
+    bufferWidth = 8;
+    bufferHeight = 4;
+    
+    topNavHeight = 100;
+    
+    toolboxHeight = 220;
+    toolboxWidth = ww-(bufferWidth*8);
+    textureBoxWidth = (toolboxWidth/(2*numTextures)) - (2*bufferWidth);
+    selectedTexture = -1;
+    
+    drawGrid = false;
+    
+    topNav = ofRectangle(0, 0, ww, topNavHeight);
+    toolbox = ofRectangle(bufferWidth*4, wh-toolboxHeight, ww-(bufferWidth*8), toolboxHeight);
+    textureBoxes.resize(numTextures);
+    
+    // Initialize font
+    verdana.load("verdana.ttf", 40);
+    verdana.setLineHeight(40.0f);
+    verdana.setLetterSpacing(1.035);
+    
+    // Initialize brush variables
+    brushRadius = 20;
+    
+    // Initialize drawing variables
+    canDraw = false;
+    mouseDown = false;
+    maxDrawnElements = 10000;
+    elementsDrawn = 0;
+    pixels.resize(10000);
     
     // Read audio files into buffers
     readFiles();
     
-    ofSetFrameRate(20);
+    ofSetFrameRate(120);
 }
 
 //--------------------------------------------------------------
 void ofApp::update(){
-
+    ww = ofGetWindowWidth();
+    wh = ofGetWindowHeight();
+    
+    mouseX = ofGetMouseX();
+    mouseY = ofGetMouseY();
+    
+    // Handle whether we can draw based on mouse location
+    if (toolbox.inside(mouseX, mouseY) || mouseY <= topNavHeight) {
+        canDraw = false;
+    } else {
+        canDraw = true;
+    }
+    
+    // If drawing is allowed and mouse is down, add pixel
+    if (selectedTexture != -1 && canDraw && mouseDown && elementsDrawn < maxDrawnElements) {
+        pixel newPixel;
+        newPixel.x = mouseX/ww;
+        newPixel.y = mouseY/wh;
+        newPixel.radius = brushRadius;
+        newPixel.color = colors[selectedTexture];
+        pixels[elementsDrawn] = newPixel;
+        elementsDrawn++;
+    }
 }
 
-//--------------------------------------------------------------
+//----------------Graphics Methods------------------------------
 void ofApp::draw(){
-    for (int i = 0; i < numTextures; i++) {
-        if (playTexture[i]) {
-            ofSetColor(colors[i]);
-            ofDrawCircle(ofRandom(0,ofGetWindowWidth()), ofRandom(0,ofGetWindowHeight()), ofRandom(10, 50));
-        }
+    ofBackgroundGradient(offWhite, lightGrey);
+    if (drawGrid) drawFullGrid();
+    drawPixels();
+    drawTopNav();
+    drawToolbox();
+    
+    
+    // Only draw brush if texture is selected
+    if (selectedTexture != -1 && canDraw) {
+        ofSetColor(colors[selectedTexture]);
+        ofDrawCircle(mouseX, mouseY, brushRadius);
     }
+}
 
+void ofApp::drawPixels() {
+    for(int i=0; i<elementsDrawn; i++) {
+        pixel curPixel = pixels[i];
+        ofSetColor(curPixel.color);
+        ofDrawCircle(curPixel.x*ww, curPixel.y*wh, curPixel.radius);
+    }
+}
+
+void ofApp::drawFullGrid() {
+    ofSetColor(100, 100, 100, 80);
+    for(int i=0; i<20; i++) {
+        // Vertical lines
+        ofDrawLine((ww/20)*i, topNavHeight, (ww/20)*i, wh-toolboxHeight);
+        
+        // Horizontal lines
+        ofDrawLine(0, (topNavHeight+(wh*(i+1))/20), ww, (topNavHeight+(wh*(i+1))/20));
+    }
+}
+
+void ofApp::drawTopNav() {
+    ofSetColor(offWhite);
+    topNav.set(0, 0, ww, topNavHeight);
+    tileGhost.set(ww-tileIconHeight-bufferWidth*2, (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
+    ofDrawRectangle(topNav);
+    ofDrawRectangle(tileGhost);
+    ofSetColor(colors[0]);
+    verdana.drawString("Sketchy", bufferWidth*2, (topNavHeight/2)+20);
+    if (!drawGrid) ofSetColor(lightGrey);
+    tileIcon.draw(ww-tileIconHeight-bufferWidth*2, (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
+}
+
+void ofApp::drawToolbox() {
+    ofSetColor(offWhite, 190);
+    toolboxWidth = ww-(bufferWidth*8);
+    toolbox.set(bufferWidth*4, wh-toolboxHeight, toolboxWidth, toolboxHeight);
+    ofDrawRectangle(toolbox);
+    
+    ofPoint toolboxCenter = toolbox.getCenter();
+    textureBoxWidth = (toolboxWidth/(2*numTextures)) - (2*bufferWidth);
+
+    for(int i=0; i<numTextures; i++) {
+        if (selectedTexture == i) {
+            ofSetColor(colors[i]);
+        } else {
+            ofSetColor(colors[i], 180);
+        }
+        textureBoxes[i].set(toolboxCenter[0]+(textureBoxWidth*i)+(bufferWidth*(i+1)), wh-(toolboxHeight-bufferHeight), textureBoxWidth, toolboxHeight-(2*bufferHeight));
+        ofDrawRectangle(textureBoxes[i]);
+    }
 }
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
-    if (key-49 >= 0 && key-49 < numTextures) {
-        playTexture[key-49] = true;
+    if (key==127) {
+        elementsDrawn = 0;
     }
 }
 
 //--------------------------------------------------------------
 void ofApp::keyReleased(int key){
-    if (key-49 >= 0 && key-49 < numTextures) {
-        playTexture[key-49] = false;
-        cursors[key-49] = 0;
-    }
+
 }
 
 //--------------------------------------------------------------
@@ -62,12 +182,29 @@ void ofApp::mouseDragged(int x, int y, int button){
 
 //--------------------------------------------------------------
 void ofApp::mousePressed(int x, int y, int button){
-
+    mouseDown = true;
+    for(int i=0; i<numTextures; i++) {
+        if (textureBoxes[i].inside(x, y)) {
+            selectedTexture = (selectedTexture == i) ? -1 : i;
+        }
+    }
+    
+    if(tileGhost.inside(x, y)) {
+        drawGrid = !drawGrid;
+    }
+    
+    if (canDraw && selectedTexture != -1) {
+        playTexture[selectedTexture] = true;
+    }
 }
 
 //--------------------------------------------------------------
 void ofApp::mouseReleased(int x, int y, int button){
-
+    mouseDown = false;
+    if (canDraw && selectedTexture != -1) {
+        playTexture[selectedTexture] = false;
+        cursors[selectedTexture] = 0;
+    }
 }
 
 //--------------------------------------------------------------
@@ -98,14 +235,14 @@ void ofApp::dragEvent(ofDragInfo dragInfo){
 
 //----------------------Audio Methods---------------------------
 void ofApp::audioOut(float * output, int bufferSize, int nChannels){
-    if (audioReady) {
+    if (audioReady && files.size() == numTextures) {
         float left = 0;
         float right = 0;
         for (int i = 0; i < bufferSize; i++) {
             for (int j = 0; j < numTextures; j++) {
                 if (playTexture[j] && cursors[j] < files[j].getSize()) {
                     left = textures[j](cursors[j], 0);
-                    left = textures[j](cursors[j], 1);
+                    right = textures[j](cursors[j], 1);
                     cursors[j]++;
                 }
             }
@@ -131,6 +268,8 @@ void ofApp::readFiles(){
     files[0].openFile(ofToDataPath("cymbal.wav", true));
     files[1].openFile(ofToDataPath("chimes.wav", true));
     files[2].openFile(ofToDataPath("choir.wav", true));
+    files[3].openFile(ofToDataPath("whistle.wav", true));
+    files[4].openFile(ofToDataPath("clap.wav", true));
 
     for (int i=0; i<numTextures; i++) {
         textures[i] = stk::StkFrames(files[i].getSize(), 2);
