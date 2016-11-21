@@ -21,6 +21,7 @@ void ofApp::setup(){
     colors[4] = ofColor(80, 81, 79);
     offWhite = ofColor(240, 240, 240);
     lightGrey = ofColor(220, 220, 220);
+    darkGrey = ofColor(160, 160, 160);
     
     mouseX = 0;
     mouseY = 0;
@@ -34,8 +35,13 @@ void ofApp::setup(){
     topNavHeight = 100;
     
     toolboxHeight = 220;
+    toolboxStart = 4 * bufferWidth;
     toolboxWidth = ww-(bufferWidth*8);
     textureBoxWidth = (toolboxWidth/2)/numTextures - (bufferWidth);
+    sliderHeight = 4;
+    sliderPosition = 0;
+    sliding = false;
+    sliderStart = bufferWidth*4;
     selectedTexture = -1;
     
     drawGrid = false;
@@ -49,6 +55,8 @@ void ofApp::setup(){
     verdana.setLetterSpacing(1.035);
     
     // Initialize brush variables
+    minBrushRadius = 8;
+    maxBrushRadius = 36;
     brushRadius = 20;
     
     // Initialize drawing variables
@@ -75,6 +83,9 @@ void ofApp::update(){
     mouseY = ofGetMouseY();
     
     toolboxHeight = wh * .15;
+    sliderWidth = (toolbox.getWidth()/2) - (sliderStart * 2);
+    
+    brushRadius = minBrushRadius + (sliderPosition * maxBrushRadius);
     
     // Handle whether we can draw based on mouse location
     if ((drawSettings && toolbox.inside(mouseX, mouseY)) || mouseY <= topNavHeight) {
@@ -164,7 +175,7 @@ void ofApp::drawTopNav() {
 void ofApp::drawToolbox() {
     ofSetColor(offWhite, 190);
     toolboxWidth = ww-(bufferWidth*8);
-    toolbox.set(bufferWidth*4, wh-toolboxHeight, toolboxWidth, toolboxHeight);
+    toolbox.set(toolboxStart, wh-toolboxHeight, toolboxWidth, toolboxHeight);
     ofDrawRectangle(toolbox);
     
     ofPoint toolboxCenter = toolbox.getCenter();
@@ -174,11 +185,25 @@ void ofApp::drawToolbox() {
         if (selectedTexture == i) {
             ofSetColor(colors[i]);
         } else {
-            ofSetColor(colors[i], 180);
+            ofSetColor(colors[i], 140);
         }
         textureBoxes[i].set(toolboxCenter[0]+(textureBoxWidth*(i))+(bufferWidth*(i+1)), wh-(toolboxHeight-2*bufferHeight), textureBoxWidth, toolboxHeight-(4*bufferHeight));
         ofDrawRectangle(textureBoxes[i]);
     }
+    drawSizeSlider();
+}
+
+void ofApp::drawSizeSlider() {
+    ofSetColor(lightGrey);
+    ofDrawRectRounded(sliderStart + toolboxStart, wh - (toolboxHeight / 2) - (sliderHeight/2), sliderWidth, sliderHeight, 10);
+    
+    if (selectedTexture == -1) {
+        ofSetColor(darkGrey);
+    } else {
+        ofSetColor(colors[selectedTexture]);
+    }
+    sliderCircle.set(toolboxStart + sliderStart + (sliderWidth * sliderPosition), wh - (toolboxHeight / 2) - brushRadius, brushRadius * 2, brushRadius * 2);
+    ofDrawRectRounded(sliderCircle, (brushRadius));
 }
 
 //--------------------------------------------------------------
@@ -201,7 +226,11 @@ void ofApp::mouseMoved(int x, int y ){
 
 //--------------------------------------------------------------
 void ofApp::mouseDragged(int x, int y, int button){
-
+    if (sliding) {
+        sliderPosition = (x - toolboxStart - sliderStart - brushRadius) / sliderWidth;
+        if (sliderPosition > 0.95) sliderPosition = 0.95;
+        if (sliderPosition < 0) sliderPosition = 0;
+    }
 }
 
 //--------------------------------------------------------------
@@ -226,6 +255,10 @@ void ofApp::mousePressed(int x, int y, int button){
     if (canDraw && selectedTexture != -1) {
         playTexture[selectedTexture] = true;
     }
+    
+    if (sliderCircle.inside(x, y)) {
+        sliding = true;
+    }
 }
 
 //--------------------------------------------------------------
@@ -234,6 +267,10 @@ void ofApp::mouseReleased(int x, int y, int button){
     if (canDraw && selectedTexture != -1) {
         playTexture[selectedTexture] = false;
         cursors[selectedTexture] = 0;
+    }
+    
+    if (sliding) {
+        sliding = false;
     }
 }
 
@@ -268,6 +305,7 @@ void ofApp::audioOut(float * output, int bufferSize, int nChannels){
     if (audioReady && files.size() == numTextures && cursors.size() == numTextures) {
         float left = 0;
         float right = 0;
+        float w = 0;
         for (int i = 0; i < bufferSize; i++) {
             for (int j = 0; j < numTextures; j++) {
                 if (playTexture[j]) {
@@ -276,6 +314,7 @@ void ofApp::audioOut(float * output, int bufferSize, int nChannels){
                     if(cursors[j]+start > end || cursors[j]+start > files[j].getSize()) {
                         cursors[j] = 0;
                     }
+                    w = 0.5 * (1 - cos((2 * pi * cursors[j])) / (end - 1));
                     left = textures[j](cursors[j]+start, 0);
                     right = textures[j](cursors[j]+start, 1);
                     cursors[j]++;

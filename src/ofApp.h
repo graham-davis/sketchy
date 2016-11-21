@@ -2,6 +2,7 @@
 
 #include "ofMain.h"
 #include "ofxStk.h"
+#include "math.h"
 
 //-----------------------------------------------------------------------------
 // Preprocessor definitions
@@ -40,6 +41,7 @@ private:
     void drawToolbox();
     void drawFullGrid();
     void drawPixels();
+    void drawSizeSlider();
     
     // Private variables
     bool audioReady;
@@ -60,6 +62,7 @@ private:
     vector<ofColor> colors;
     ofColor offWhite;
     ofColor lightGrey;
+    ofColor darkGrey;
     
     ofRectangle topNav;
     ofRectangle toolbox;
@@ -69,6 +72,8 @@ private:
     // Brush variables
     ofPath brush;
     float brushRadius;
+    float minBrushRadius;
+    float maxBrushRadius;
     
     float ww;
     float wh;
@@ -88,8 +93,17 @@ private:
     
     // Toolbox variables
     float toolboxHeight;
+    float toolboxStart;
     float toolboxWidth;
     float textureBoxWidth;
+    
+    // Slider Variables
+    float sliderHeight;
+    float sliderPosition;
+    float sliderWidth;
+    float sliderStart;
+    ofRectangle sliderCircle;
+    bool sliding;
     
     // Font variables
     ofTrueTypeFont verdana;
