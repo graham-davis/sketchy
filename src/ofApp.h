@@ -3,6 +3,7 @@
 #include "ofMain.h"
 #include "ofxStk.h"
 #include "math.h"
+#include "pixel.h"
 
 //-----------------------------------------------------------------------------
 // Preprocessor definitions
@@ -108,20 +109,11 @@ private:
     // Font variables
     ofTrueTypeFont verdana;
     
-    // Define a pixel struct
-    struct pixel {
-        float x;
-        float y;
-        float radius;
-        ofColor color;
-    };
-    
     // Drawing variables
     bool canDraw;
     bool mouseDown;
     int maxDrawnElements;
     int elementsDrawn;
-    vector<pixel> pixels;
-    bool explodingPixels;
-    float explodeRatio;
+    bool dissolvingPixels;
+    vector<Pixel> pixels;
 };

@@ -65,8 +65,6 @@ void ofApp::setup(){
     maxDrawnElements = 10000;
     elementsDrawn = 0;
     pixels.resize(10000);
-    explodingPixels = false;
-    explodeRatio = 1.0;
     
     // Read audio files into buffers
     readFiles();
@@ -94,22 +92,13 @@ void ofApp::update(){
         canDraw = true;
     }
     
-    if (explodingPixels) {
-        explodeRatio -= 0.025;
-        if (explodeRatio < 0.025) {
-            explodeRatio = 1.0;
-            explodingPixels = false;
-            elementsDrawn = 0;
-        }
-    }
-    
     // If drawing is allowed and mouse is down, add pixel
-    if (selectedTexture != -1 && canDraw && mouseDown && elementsDrawn < maxDrawnElements) {
-        pixel newPixel;
-        newPixel.x = mouseX/ww;
-        newPixel.y = mouseY/wh;
-        newPixel.radius = brushRadius;
-        newPixel.color = colors[selectedTexture];
+    if (selectedTexture != -1 && canDraw && mouseDown && elementsDrawn < maxDrawnElements && !dissolvingPixels) {
+        Pixel newPixel;
+        newPixel.setPosition(ofVec3f(mouseX/ww, mouseY/wh, 0));
+        newPixel.setVelocity(ofVec3f(0, 0, 0));
+        newPixel.setSize(brushRadius);
+        newPixel.setColor(colors[selectedTexture]);
         pixels[elementsDrawn] = newPixel;
         elementsDrawn++;
     }
@@ -125,17 +114,26 @@ void ofApp::draw(){
     
     
     // Only draw brush if texture is selected
-    if (selectedTexture != -1 && canDraw) {
+    if (selectedTexture != -1 && canDraw && !dissolvingPixels) {
         ofSetColor(colors[selectedTexture]);
         ofDrawCircle(mouseX, mouseY, brushRadius);
     }
 }
 
 void ofApp::drawPixels() {
-    for(int i=0; i<elementsDrawn; i++) {
-        pixel curPixel = pixels[i];
-        ofSetColor(curPixel.color);
-        ofDrawCircle(curPixel.x*ww, curPixel.y*wh, curPixel.radius*explodeRatio);
+    int i = 0;
+    while (i < elementsDrawn) {
+        ofVec3f pixelPos = pixels[i].getPosition();
+        float pixelRad = pixels[i].getRadius();
+        if (pixelPos[0] < 0 || pixelPos[0] >  1 || pixelPos[1] < 0 || pixelPos[1] > 1 || pixelRad < 0.5) {
+            pixels[i] = pixels[elementsDrawn];
+            elementsDrawn--;
+            if (elementsDrawn == 0 && dissolvingPixels) dissolvingPixels = false;
+            std::cout << elementsDrawn << std::endl;
+        } else {
+            pixels[i].draw(ww, wh);
+            i++;
+        }
     }
 }
 
@@ -208,9 +206,12 @@ void ofApp::drawSizeSlider() {
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
-    if (key==127 && !explodingPixels) {
-        explodingPixels = true;
-        explodeRatio = 1.0;
+    if (key==127) {
+        for(int i = 0; i < elementsDrawn; i++) {
+            pixels[i].dissolve();
+            pixels[i].setVelocity(ofVec3f(ofRandom(-.05, .05), ofRandom(-.05, .05), ofRandom(-5, 5)));
+            dissolvingPixels = true;
+        }
     }
 }
 
