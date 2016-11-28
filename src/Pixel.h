@@ -20,6 +20,7 @@ public:
     void setVelocity(ofVec3f newVel);
     void setSize(float newRadius);
     void setColor(ofColor newColor);
+    void setOpacity(float newOpacity);
     void draw(float ww, float wh);
     
     void dissolve() { dissolving = true; };
@@ -28,6 +29,7 @@ public:
     
 private:
     float radius;
+    float opacity;
     ofColor color;
     ofVec3f pos;
     ofVec3f vel;

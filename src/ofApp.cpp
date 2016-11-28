@@ -10,6 +10,7 @@ void ofApp::setup(){
     // Initialize top nav variables
     tileIcon.load(ofToDataPath("tile.png", true));
     settingsIcon.load(ofToDataPath("settings.png", true));
+    stickersIcon.load(ofToDataPath("sticker.png", true));
     tileIconHeight = 50;
     
     // Initialize program colors
@@ -46,6 +47,7 @@ void ofApp::setup(){
     
     drawGrid = false;
     drawSettings = true;
+    drawStickers = false;
     
     textureBoxes.resize(numTextures);
     
@@ -58,6 +60,7 @@ void ofApp::setup(){
     minBrushRadius = 8;
     maxBrushRadius = 36;
     brushRadius = 20;
+    opacity = 1;
     
     // Initialize drawing variables
     canDraw = false;
@@ -99,6 +102,7 @@ void ofApp::update(){
         newPixel.setVelocity(ofVec3f(0, 0, 0));
         newPixel.setSize(brushRadius);
         newPixel.setColor(colors[selectedTexture]);
+        newPixel.setOpacity(opacity);
         pixels[elementsDrawn] = newPixel;
         elementsDrawn++;
     }
@@ -111,11 +115,11 @@ void ofApp::draw(){
     drawPixels();
     drawTopNav();
     if (drawSettings) drawToolbox();
-    
+    if (drawStickers) drawStickerbox();
     
     // Only draw brush if texture is selected
     if (selectedTexture != -1 && canDraw && !dissolvingPixels) {
-        ofSetColor(colors[selectedTexture]);
+        ofSetColor(colors[selectedTexture], 256*opacity);
         ofDrawCircle(mouseX, mouseY, brushRadius);
     }
 }
@@ -129,7 +133,6 @@ void ofApp::drawPixels() {
             pixels[i] = pixels[elementsDrawn];
             elementsDrawn--;
             if (elementsDrawn == 0 && dissolvingPixels) dissolvingPixels = false;
-            std::cout << elementsDrawn << std::endl;
         } else {
             pixels[i].draw(ww, wh);
             i++;
@@ -153,21 +156,35 @@ void ofApp::drawTopNav() {
     topNav.set(0, 0, ww, topNavHeight);
     tileGhost.set(ww-tileIconHeight-bufferWidth*2, (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
     settingsGhost.set(ww-(tileIconHeight*2)-(bufferWidth*4), (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
+    stickersGhost.set(ww-(tileIconHeight*3)-(bufferWidth*6), (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
 
     ofDrawRectangle(topNav);
     ofDrawRectangle(tileGhost);
     ofDrawRectangle(settingsGhost);
+    ofDrawRectangle(stickersGhost);
     
     ofSetColor(colors[0]);
     verdana.drawString("Sketchy", bufferWidth*2, (topNavHeight/2)+20);
+    
+    // Draw grid icon
     if (!drawGrid) ofSetColor(lightGrey);
     tileIcon.draw(ww-tileIconHeight-bufferWidth*2, (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
+    
+    // Draw settings icon
     if (!drawSettings) {
         ofSetColor(lightGrey);
     } else {
         ofSetColor(colors[0]);
     }
     settingsIcon.draw(ww-(tileIconHeight*2)-(bufferWidth*4), (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
+    
+    //Draw stickers icon
+    if (!drawStickers) {
+        ofSetColor(lightGrey);
+    } else {
+        ofSetColor(colors[0]);
+    }
+    stickersIcon.draw(ww-(tileIconHeight*3)-(bufferWidth*6), (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
 }
 
 void ofApp::drawToolbox() {
@@ -198,10 +215,17 @@ void ofApp::drawSizeSlider() {
     if (selectedTexture == -1) {
         ofSetColor(darkGrey);
     } else {
-        ofSetColor(colors[selectedTexture]);
+        ofSetColor(colors[selectedTexture], 256*opacity);
     }
     sliderCircle.set(toolboxStart + sliderStart + (sliderWidth * sliderPosition), wh - (toolboxHeight / 2) - brushRadius, brushRadius * 2, brushRadius * 2);
     ofDrawRectRounded(sliderCircle, (brushRadius));
+}
+
+
+void ofApp::drawStickerbox() {
+    ofSetColor(offWhite, 190);
+    stickerBox.set(toolboxStart, topNavHeight, toolboxWidth, toolboxHeight);
+    ofDrawRectangle(stickerBox);
 }
 
 //--------------------------------------------------------------
@@ -229,8 +253,12 @@ void ofApp::mouseMoved(int x, int y ){
 void ofApp::mouseDragged(int x, int y, int button){
     if (sliding) {
         sliderPosition = (x - toolboxStart - sliderStart - brushRadius) / sliderWidth;
-        if (sliderPosition > 0.95) sliderPosition = 0.95;
+        if (sliderPosition > 0.9) sliderPosition = 0.9;
         if (sliderPosition < 0) sliderPosition = 0;
+        
+        opacity += (-1*(y - wh + (toolboxHeight / 2))) / (toolboxHeight*4);
+        if (opacity > 1) opacity = 1;
+        if (opacity < 0.15) opacity = 0.15;
     }
 }
 
@@ -251,6 +279,10 @@ void ofApp::mousePressed(int x, int y, int button){
     
     if (settingsGhost.inside(x, y)) {
         drawSettings = !drawSettings;
+    }
+    
+    if (stickersGhost.inside(x, y)) {
+        drawStickers = !drawStickers;
     }
     
     if (canDraw && selectedTexture != -1) {

@@ -43,6 +43,7 @@ private:
     void drawFullGrid();
     void drawPixels();
     void drawSizeSlider();
+    void drawStickerbox();
     
     // Private variables
     bool audioReady;
@@ -67,6 +68,7 @@ private:
     
     ofRectangle topNav;
     ofRectangle toolbox;
+    ofRectangle stickerBox;
     vector<ofRectangle> textureBoxes;
     int selectedTexture;
     
@@ -75,6 +77,7 @@ private:
     float brushRadius;
     float minBrushRadius;
     float maxBrushRadius;
+    float opacity;
     
     float ww;
     float wh;
@@ -85,12 +88,15 @@ private:
     float topNavHeight;
     ofImage tileIcon;
     ofImage settingsIcon;
+    ofImage stickersIcon;
     float tileIconHeight;
     bool drawGrid;
     bool drawSettings;
+    bool drawStickers;
     
     ofRectangle tileGhost;
     ofRectangle settingsGhost;
+    ofRectangle stickersGhost;
     
     // Toolbox variables
     float toolboxHeight;
