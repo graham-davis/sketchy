@@ -43,9 +43,12 @@ private:
     void drawToolbox();
     void drawFullGrid();
     void drawPixels();
+    void redrawPixels();
     void drawSizeSlider();
     void drawStickerbox();
     void drawStickers();
+    void checkNearbyStickers(Pixel *pixel);
+    void clearStrokes();
     
     // Private variables
     bool audioReady;
@@ -118,7 +121,9 @@ private:
     ofTrueTypeFont verdana;
     
     // Drawing variables
+    bool redraw;
     bool canDraw;
+    bool drawing;
     bool mouseDown;
     int maxDrawnElements;
     int elementsDrawn;
@@ -130,9 +135,16 @@ private:
     Sticker brushSticker;
     float stickerBoxHeight;
     float stickerIconSize;
-    
     int stickersAdded;
     
     vector<Sticker> stickerSelectors;
     vector<Sticker> canvasStickers;
+    
+    // Stroke variables
+    int maxStrokes;
+    int currentStroke;
+    int currentStrokePixel;
+    int maxStrokeLength;
+    int redrawPixel;
+    vector<vector<Pixel>> strokes;
 };

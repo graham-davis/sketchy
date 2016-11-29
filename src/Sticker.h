@@ -18,12 +18,13 @@ public:
     ~Sticker();
     
     void setType(int type);
-    void draw();
+    void draw(float ww, float wh);
     void setSize(float newSize) { size = newSize; };
     void setPosition(float x, float y);
     
     float getSize() { return size; };
     int getType() { return stickerType; };
+    ofVec2f getPosition() { return pos; };
     bool inside(float x, float y);
     
 private:

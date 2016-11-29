@@ -19,8 +19,8 @@ void Pixel::setPosition(ofVec3f newPos) {
     pos = newPos;
 }
 
-void Pixel::setVelocity(ofVec3f newVel) {
-    vel = newVel;
+void Pixel::setVelocity(float x, float y, float z) {
+    vel = ofVec3f(x, y, z);
 }
 
 void Pixel::setSize(float newRadius) {

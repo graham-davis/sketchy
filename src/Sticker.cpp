@@ -48,15 +48,15 @@ void Sticker::setPosition(float x, float y) {
     pos = ofVec2f(x, y);
 }
 
-void Sticker::draw(){
+void Sticker::draw(float ww, float wh){
     ofSetColor(color);
-    border.set(pos[0], pos[1], size, size);
+    border.set(pos[0]*ww, pos[1]*wh, size, size);
     ofDrawRectRounded(border, size/2);
     
     float innerSize = size * 0.75;
     
     ofSetColor(ofColor(240, 240, 240));
-    icon.draw(pos[0] + ((size - innerSize) / 2), pos[1] + ((size - innerSize) / 2), innerSize, innerSize);
+    icon.draw((pos[0]*ww) + ((size - innerSize) / 2), (pos[1]*wh) + ((size - innerSize) / 2), innerSize, innerSize);
 }
 
 bool Sticker::inside(float x, float y) {

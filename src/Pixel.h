@@ -17,7 +17,7 @@ public:
     Pixel();
     ~Pixel();
     void setPosition(ofVec3f newPos);
-    void setVelocity(ofVec3f newVel);
+    void setVelocity(float x, float y, float z);
     void setSize(float newRadius);
     void setColor(ofColor newColor);
     void setOpacity(float newOpacity);
