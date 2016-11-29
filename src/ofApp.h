@@ -147,4 +147,7 @@ private:
     int maxStrokeLength;
     int redrawPixel;
     vector<vector<Pixel>> strokes;
+    
+    // Granular variables
+    Granulate granulator;
 };

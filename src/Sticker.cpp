@@ -22,7 +22,7 @@ void Sticker::setType(int type) {
         case 1:
             stickerType = 1;
             color = ofColor(255, 224, 102);
-            icon.load(ofToDataPath("rain.png", true));
+            icon.load(ofToDataPath("lightning.png", true));
             break;
         case 2:
             stickerType = 2;
@@ -37,7 +37,7 @@ void Sticker::setType(int type) {
         case 4:
             stickerType = 4;
             color = ofColor(80, 81, 79);
-            icon.load(ofToDataPath("hole.png", true));
+            icon.load(ofToDataPath("vortex.png", true));
             break;
         default:
             break;

@@ -14,7 +14,7 @@ void ofApp::setup(){
     tileIconHeight = 50;
     
     // Initialize sticker variables
-    stickerIconSize = 50;
+    stickerIconSize = 75;
     stickerBoxHeight = 100;
     stickerSelectors.resize(5);
     canvasStickers.resize(30);
@@ -109,8 +109,8 @@ void ofApp::update(){
     mouseX = ofGetMouseX();
     mouseY = ofGetMouseY();
     
-    toolboxHeight = wh * .15;
-    stickerIconSize = stickerBoxHeight * 0.6;
+    toolboxHeight = wh * .2;
+    stickerIconSize = stickerBoxHeight * 0.75;
     sliderWidth = (toolbox.getWidth()/2) - (sliderStart * 2);
     
     brushRadius = minBrushRadius + (sliderPosition * maxBrushRadius);
@@ -469,8 +469,8 @@ void ofApp::audioOut(float * output, int bufferSize, int nChannels){
                         cursors[j] = 0;
                     }
                     w = 0.5 * (1 - cos((2 * pi * cursors[j])) / (end - 1));
-                    left = textures[j](cursors[j]+start, 0);
-                    right = textures[j](cursors[j]+start, 1);
+                    left = textures[j](cursors[j]+start, 0)*opacity;
+                    right = textures[j](cursors[j]+start, 1)*opacity;
                     cursors[j]++;
                 }
             }
@@ -496,9 +496,9 @@ void ofApp::readFiles(){
     
     files[0].openFile(ofToDataPath("cymbal.wav", true));
     files[1].openFile(ofToDataPath("chimes.wav", true));
-    files[2].openFile(ofToDataPath("choir.wav", true));
+    files[2].openFile(ofToDataPath("water.wav", true));
     files[3].openFile(ofToDataPath("whistle.wav", true));
-    files[4].openFile(ofToDataPath("clap.wav", true));
+    files[4].openFile(ofToDataPath("fiddle.wav", true));
 
     for (int i=0; i<numTextures; i++) {
         textures[i] = stk::StkFrames(files[i].getSize(), 2);
