@@ -13,6 +13,19 @@ void ofApp::setup(){
     stickersIcon.load(ofToDataPath("sticker.png", true));
     tileIconHeight = 50;
     
+    // Initialize sticker variables
+    stickerIconSize = 50;
+    stickerBoxHeight = 100;
+    stickerSelectors.resize(5);
+    canvasStickers.resize(100);
+    stickersAdded = 0;
+    for (int i=0; i<5; i++) {
+        Sticker sticker;
+        sticker.setSize(stickerIconSize);
+        sticker.setType(i);
+        stickerSelectors[i] = sticker;
+    }
+    
     // Initialize program colors
     colors.resize(numTextures);
     colors[0] = ofColor(242, 95, 92);
@@ -47,7 +60,7 @@ void ofApp::setup(){
     
     drawGrid = false;
     drawSettings = true;
-    drawStickers = false;
+    drawStickerMenu = false;
     
     textureBoxes.resize(numTextures);
     
@@ -84,15 +97,21 @@ void ofApp::update(){
     mouseY = ofGetMouseY();
     
     toolboxHeight = wh * .15;
+    stickerIconSize = stickerBoxHeight * 0.6;
     sliderWidth = (toolbox.getWidth()/2) - (sliderStart * 2);
     
     brushRadius = minBrushRadius + (sliderPosition * maxBrushRadius);
     
     // Handle whether we can draw based on mouse location
-    if ((drawSettings && toolbox.inside(mouseX, mouseY)) || mouseY <= topNavHeight) {
+    if (placingSticker || (drawSettings && toolbox.inside(mouseX, mouseY)) || mouseY <= topNavHeight || (drawStickerMenu && stickerBox.inside(mouseX, mouseY))) {
         canDraw = false;
     } else {
         canDraw = true;
+    }
+    
+    // If placing sticker, update brush sticker position
+    if (placingSticker) {
+        brushSticker.setPosition(mouseX - (stickerIconSize/2), mouseY - (stickerIconSize/2));
     }
     
     // If drawing is allowed and mouse is down, add pixel
@@ -113,14 +132,23 @@ void ofApp::draw(){
     ofBackgroundGradient(offWhite, lightGrey);
     if (drawGrid) drawFullGrid();
     drawPixels();
+    drawStickers();
     drawTopNav();
     if (drawSettings) drawToolbox();
-    if (drawStickers) drawStickerbox();
+    if (drawStickerMenu) drawStickerbox();
     
-    // Only draw brush if texture is selected
-    if (selectedTexture != -1 && canDraw && !dissolvingPixels) {
+    // Only draw brush if texture is selected, pixels are not dissolving, and sticker isn't being placed
+    if (placingSticker) {
+        brushSticker.draw();
+    } else if (selectedTexture != -1 && canDraw && !dissolvingPixels) {
         ofSetColor(colors[selectedTexture], 256*opacity);
         ofDrawCircle(mouseX, mouseY, brushRadius);
+    }
+}
+
+void ofApp::drawStickers() {
+    for (int i=0; i<stickersAdded; i++) {
+        canvasStickers[i].draw();
     }
 }
 
@@ -159,10 +187,13 @@ void ofApp::drawTopNav() {
     stickersGhost.set(ww-(tileIconHeight*3)-(bufferWidth*6), (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
 
     ofDrawRectangle(topNav);
+    
+    // Draw clickable "ghost" icons
     ofDrawRectangle(tileGhost);
     ofDrawRectangle(settingsGhost);
     ofDrawRectangle(stickersGhost);
     
+    // Draw app name
     ofSetColor(colors[0]);
     verdana.drawString("Sketchy", bufferWidth*2, (topNavHeight/2)+20);
     
@@ -179,7 +210,7 @@ void ofApp::drawTopNav() {
     settingsIcon.draw(ww-(tileIconHeight*2)-(bufferWidth*4), (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
     
     //Draw stickers icon
-    if (!drawStickers) {
+    if (!drawStickerMenu) {
         ofSetColor(lightGrey);
     } else {
         ofSetColor(colors[0]);
@@ -217,15 +248,23 @@ void ofApp::drawSizeSlider() {
     } else {
         ofSetColor(colors[selectedTexture], 256*opacity);
     }
-    sliderCircle.set(toolboxStart + sliderStart + (sliderWidth * sliderPosition), wh - (toolboxHeight / 2) - brushRadius, brushRadius * 2, brushRadius * 2);
+    sliderCircle.set(toolboxStart + sliderStart + (sliderWidth*sliderPosition), wh - (toolboxHeight/2) - brushRadius, brushRadius*2, brushRadius*2);
     ofDrawRectRounded(sliderCircle, (brushRadius));
 }
 
 
 void ofApp::drawStickerbox() {
     ofSetColor(offWhite, 190);
-    stickerBox.set(toolboxStart, topNavHeight, toolboxWidth, toolboxHeight);
+    stickerBox.set(toolboxStart, topNavHeight, toolboxWidth, stickerBoxHeight);
     ofDrawRectangle(stickerBox);
+    
+    for (int i = 0; i < 5; i++) {
+        stickerSelectors[i].setSize(stickerIconSize);
+        float stickerX = toolboxStart + (bufferWidth*2*(i+1)) + (stickerIconSize*i);
+        float stickerY = topNavHeight + (stickerBoxHeight/2) - (stickerIconSize/2);
+        stickerSelectors[i].setPosition(stickerX, stickerY);
+        stickerSelectors[i].draw();
+    }
 }
 
 //--------------------------------------------------------------
@@ -273,6 +312,15 @@ void ofApp::mousePressed(int x, int y, int button){
         }
     }
     
+    if (drawStickerMenu) {
+        for (int i=0; i<5; i++) {
+            if (stickerSelectors[i].inside(x,y)) {
+                placingSticker = true;
+                brushSticker = stickerSelectors[i];
+            }
+        }
+    }
+    
     if (tileGhost.inside(x, y)) {
         drawGrid = !drawGrid;
     }
@@ -282,7 +330,7 @@ void ofApp::mousePressed(int x, int y, int button){
     }
     
     if (stickersGhost.inside(x, y)) {
-        drawStickers = !drawStickers;
+        drawStickerMenu = !drawStickerMenu;
     }
     
     if (canDraw && selectedTexture != -1) {
@@ -292,6 +340,7 @@ void ofApp::mousePressed(int x, int y, int button){
     if (sliderCircle.inside(x, y)) {
         sliding = true;
     }
+    
 }
 
 //--------------------------------------------------------------
@@ -304,6 +353,17 @@ void ofApp::mouseReleased(int x, int y, int button){
     
     if (sliding) {
         sliding = false;
+    }
+    
+    if (placingSticker) {
+        if (!stickerBox.inside(x, y) && !topNav.inside(x, y) && (!toolbox.inside(x, y) || !drawSettings)) {
+            std::cout << "drawing new sticker" << std::endl;
+            Sticker newSticker;
+            newSticker = brushSticker;
+            canvasStickers[stickersAdded] = newSticker;
+            stickersAdded++;
+        }
+        placingSticker = false;
     }
 }
 
@@ -369,6 +429,7 @@ void ofApp::readFiles(){
     playTexture.resize(numTextures);
     
     for (int i=0; i<numTextures; i++) {
+        playTexture[i] = false;
         files[i].setRate(MY_SRATE);
     }
     

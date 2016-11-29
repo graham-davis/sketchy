@@ -4,6 +4,7 @@
 #include "ofxStk.h"
 #include "math.h"
 #include "pixel.h"
+#include "Sticker.h"
 
 //-----------------------------------------------------------------------------
 // Preprocessor definitions
@@ -44,6 +45,7 @@ private:
     void drawPixels();
     void drawSizeSlider();
     void drawStickerbox();
+    void drawStickers();
     
     // Private variables
     bool audioReady;
@@ -92,7 +94,7 @@ private:
     float tileIconHeight;
     bool drawGrid;
     bool drawSettings;
-    bool drawStickers;
+    bool drawStickerMenu;
     
     ofRectangle tileGhost;
     ofRectangle settingsGhost;
@@ -122,4 +124,15 @@ private:
     int elementsDrawn;
     bool dissolvingPixels;
     vector<Pixel> pixels;
+    
+    // Sticker variables
+    bool placingSticker;
+    Sticker brushSticker;
+    float stickerBoxHeight;
+    float stickerIconSize;
+    
+    int stickersAdded;
+    
+    vector<Sticker> stickerSelectors;
+    vector<Sticker> canvasStickers;
 };
