@@ -60,9 +60,6 @@ private:
     
     // Texture variables
     int numTextures;
-    vector<stk::StkFrames> textures;
-    vector<stk::FileWvIn> files;
-    vector<int> cursors;
     vector<bool> playTexture;
     
     // GUI/Color Variables
@@ -149,5 +146,7 @@ private:
     vector<vector<Pixel>> strokes;
     
     // Granular variables
-    Granulate granulator;
+    vector<stk::Granulate> granulators;
+    float grainSize;
+    int grainStart;
 };

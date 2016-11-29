@@ -316,8 +316,9 @@ void ofApp::drawStickerbox() {
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
-    if (key==32 && !redraw){
-        redraw = true;
+    if (key==32){
+        redraw = !redraw;
+        redrawPixel = 0;
     }
     if (key==127 && !redraw) {
         for(int i = 0; i < elementsDrawn; i++) {
@@ -406,8 +407,7 @@ void ofApp::mousePressed(int x, int y, int button){
 void ofApp::mouseReleased(int x, int y, int button){
     mouseDown = false;
     if (drawing) {
-        playTexture[selectedTexture] = false;
-        cursors[selectedTexture] = 0;
+        if (selectedTexture != -1) playTexture[selectedTexture] = false;
         currentStroke++;
         if (currentStrokePixel > maxStrokeLength) maxStrokeLength = currentStrokePixel;
         currentStrokePixel = 0;
@@ -456,26 +456,33 @@ void ofApp::dragEvent(ofDragInfo dragInfo){
 
 //----------------------Audio Methods---------------------------
 void ofApp::audioOut(float * output, int bufferSize, int nChannels){
-    if (audioReady && files.size() == numTextures && cursors.size() == numTextures) {
+    if (audioReady) {
         float left = 0;
         float right = 0;
         float w = 0;
-        for (int i = 0; i < bufferSize; i++) {
-            for (int j = 0; j < numTextures; j++) {
-                if (playTexture[j]) {
-                    int start = (mouseX / ww) * files[j].getSize();
-                    int end = start + brushRadius*100;
-                    if(cursors[j]+start > end || cursors[j]+start > files[j].getSize()) {
-                        cursors[j] = 0;
-                    }
-                    w = 0.5 * (1 - cos((2 * pi * cursors[j])) / (end - 1));
-                    left = textures[j](cursors[j]+start, 0)*opacity;
-                    right = textures[j](cursors[j]+start, 1)*opacity;
-                    cursors[j]++;
+
+        for (int j = 0; j < numTextures; j++) {
+            if (playTexture[j]) {
+                grainSize = brushRadius*500;
+                float fileSize = granulators[j].fileSize();
+                float xRatio = mouseX / ww;
+                if (xRatio < 0) xRatio = 0;
+                if (xRatio > 0.95) xRatio = 0.95;
+                
+                float yRatio = mouseY / wh;
+                if (xRatio < 0) xRatio = 0;
+                if (xRatio > 1) xRatio = 1;
+                
+                grainStart = xRatio * fileSize;
+                granulators[j].setGrainParameters(grainSize, 100*yRatio, 0, 0, grainStart);
+                for (int i = 0; i < bufferSize; i++) {
+                    stk::StkFloat sample = granulators[j].tick();
+                    left = sample*opacity;
+                    right = sample*opacity;
+                    output[2*i] = left;
+                    output[2*i+1] = right;
                 }
             }
-            output[2*i] = left;
-            output[2*i+1] = right;
         }
     }
 }
@@ -483,28 +490,22 @@ void ofApp::audioOut(float * output, int bufferSize, int nChannels){
 void ofApp::readFiles(){
     stk::Stk::setSampleRate(MY_SRATE);
     
+    grainSize = 5000;
+    grainStart = 0;
+    granulators.resize(numTextures);
+    granulators[0].openFile(ofToDataPath("cymbal.wav", true));
+    granulators[1].openFile(ofToDataPath("chimes.wav", true));
+    granulators[2].openFile(ofToDataPath("water.wav", true));
+    granulators[3].openFile(ofToDataPath("whistle.wav", true));
+    granulators[4].openFile(ofToDataPath("fiddle.wav", true));
+    
     // Resize file/signal vectors
-    files.resize(numTextures);
-    textures.resize(numTextures);
-    cursors.resize(numTextures);
     playTexture.resize(numTextures);
     
     for (int i=0; i<numTextures; i++) {
         playTexture[i] = false;
-        files[i].setRate(MY_SRATE);
-    }
-    
-    files[0].openFile(ofToDataPath("cymbal.wav", true));
-    files[1].openFile(ofToDataPath("chimes.wav", true));
-    files[2].openFile(ofToDataPath("water.wav", true));
-    files[3].openFile(ofToDataPath("whistle.wav", true));
-    files[4].openFile(ofToDataPath("fiddle.wav", true));
-
-    for (int i=0; i<numTextures; i++) {
-        textures[i] = stk::StkFrames(files[i].getSize(), 2);
-        files[i].tick(textures[i]);
-        cursors[i] = 0;
-        playTexture[i] = false;
+        granulators[i].setVoices(5);
+        granulators[i].setGrainParameters(grainSize, 50, 0, 0, grainStart);
     }
     
     audioReady = true;
