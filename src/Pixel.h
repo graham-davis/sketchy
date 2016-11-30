@@ -22,10 +22,13 @@ public:
     void setColor(ofColor newColor);
     void setOpacity(float newOpacity);
     void draw(float ww, float wh);
+    void setType(int newType) { pixelType = newType; };
     
     void dissolve() { dissolving = true; };
     ofVec3f getPosition() { return pos; };
     float getRadius() { return radius; };
+    int getType() { return pixelType; };
+    float getOpacity() { return opacity; };
     
 private:
     float radius;
@@ -34,6 +37,7 @@ private:
     ofVec3f pos;
     ofVec3f vel;
     bool dissolving;
+    int pixelType;
 };
 
 #endif /* defined(____Pixel__) */

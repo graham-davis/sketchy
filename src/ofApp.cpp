@@ -27,14 +27,15 @@ void ofApp::setup(){
     }
     
     // Initialize stroke variables
-    maxStrokes = 50;
+    maxStrokes = 100;
+    maxPixelsPerStroke = 1000;
     currentStroke = 0;
     currentStrokePixel = 0;
     maxStrokeLength = 0;
     redrawPixel = 0;
     strokes.resize(maxStrokes);
     for (int i=0; i<maxStrokes; i++) {
-        strokes[i].resize(500);
+        strokes[i].resize(maxPixelsPerStroke);
     }
     
     // Initialize program colors
@@ -95,6 +96,16 @@ void ofApp::setup(){
     elementsDrawn = 0;
     pixels.resize(10000);
     
+    // Initialize smoothing parameters
+    onOff.resize(numTextures);
+    for (int i=0; i<numTextures; i++) {
+        onOff[i].setSmooth(.8);
+    }
+    
+    // Initialize reverb
+    reverb.setEffectMix(0.4);
+    reverb.setRoomSize(0.8);
+    
     // Read audio files into buffers
     readFiles();
     
@@ -136,8 +147,9 @@ void ofApp::update(){
         newPixel.setSize(brushRadius);
         newPixel.setColor(colors[selectedTexture]);
         newPixel.setOpacity(opacity);
+        newPixel.setType(selectedTexture);
         pixels[elementsDrawn] = newPixel;
-        strokes[currentStroke][currentStrokePixel] = newPixel;
+        strokes[currentStroke%maxStrokes][currentStrokePixel%maxPixelsPerStroke] = newPixel;
         currentStrokePixel++;
         elementsDrawn++;
     }
@@ -336,6 +348,8 @@ void ofApp::clearStrokes(){
         strokes[i].resize(500);
     }
     maxStrokeLength = 0;
+    currentStroke = 0;
+    currentStrokePixel = 0;
 }
 
 //--------------------------------------------------------------
@@ -394,7 +408,7 @@ void ofApp::mousePressed(int x, int y, int button){
     }
     
     if (canDraw && selectedTexture != -1) {
-        playTexture[selectedTexture] = true;
+        playTexture[selectedTexture] = 1;
     }
     
     if (sliderCircle.inside(x, y)) {
@@ -407,10 +421,11 @@ void ofApp::mousePressed(int x, int y, int button){
 void ofApp::mouseReleased(int x, int y, int button){
     mouseDown = false;
     if (drawing) {
-        if (selectedTexture != -1) playTexture[selectedTexture] = false;
+        if (selectedTexture != -1) playTexture[selectedTexture] = 0;
         currentStroke++;
         if (currentStrokePixel > maxStrokeLength) maxStrokeLength = currentStrokePixel;
         currentStrokePixel = 0;
+        drawing = false;
     }
     
     if (sliding) {
@@ -457,30 +472,47 @@ void ofApp::dragEvent(ofDragInfo dragInfo){
 //----------------------Audio Methods---------------------------
 void ofApp::audioOut(float * output, int bufferSize, int nChannels){
     if (audioReady) {
-        float left = 0;
-        float right = 0;
-        float w = 0;
-
-        for (int j = 0; j < numTextures; j++) {
-            if (playTexture[j]) {
-                grainSize = brushRadius*500;
-                float fileSize = granulators[j].fileSize();
-                float xRatio = mouseX / ww;
-                if (xRatio < 0) xRatio = 0;
-                if (xRatio > 0.95) xRatio = 0.95;
-                
-                float yRatio = mouseY / wh;
-                if (xRatio < 0) xRatio = 0;
-                if (xRatio > 1) xRatio = 1;
-                
-                grainStart = xRatio * fileSize;
-                granulators[j].setGrainParameters(grainSize, 100*yRatio, 0, 0, grainStart);
-                for (int i = 0; i < bufferSize; i++) {
-                    stk::StkFloat sample = granulators[j].tick();
-                    left = sample*opacity;
-                    right = sample*opacity;
-                    output[2*i] = left;
-                    output[2*i+1] = right;
+        if (redraw) {
+            float sample = 0;
+            Pixel currPixel = strokes[0][redrawPixel];
+            ofVec3f position = currPixel.getPosition();
+            int pixelType = currPixel.getType();
+            granulators[pixelType].setGrainParameters(currPixel.getRadius()*500, 100*position[1], 0, 0, granulators[pixelType].fileSize()*position[0]);
+            reverbBuffer.resize(bufferSize, 2, 0);
+            granulators[pixelType].tick(reverbBuffer);
+            reverb.tick(reverbBuffer);
+            for (int i = 0; i < bufferSize; i++) {
+                sample = reverbBuffer(i, 0)*currPixel.getOpacity();
+                output[i*2] = sample;
+                output[(i*2)+1] = sample;
+            }
+        } else {
+            float sample = 0;
+            for (int j = 0; j < numTextures; j++) {
+                float gain = onOff[j].tick(playTexture[j]);
+                if (gain > 0.01) {
+                    reverbBuffer.resize(bufferSize, 2, 0);
+                    grainSize = brushRadius*500;
+                    float fileSize = granulators[j].fileSize();
+                    float xRatio = mouseX / ww;
+                    if (xRatio < 0) xRatio = 0;
+                    if (xRatio > 0.99) xRatio = 0.99;
+                    
+                    float yRatio = mouseY / wh;
+                    if (yRatio < 0) yRatio = 0;
+                    if (yRatio > 1) yRatio = 1;
+                    
+                    grainStart = xRatio * fileSize;
+                    granulators[j].setGrainParameters(grainSize, 100*yRatio, 0, 0, grainStart);
+                    granulators[j].tick(reverbBuffer);
+                    reverb.tick(reverbBuffer);
+                    for (int i = 0; i < bufferSize; i++) {
+                        sample = reverbBuffer(i, 0)*opacity*gain;
+                        output[i*2] = sample;
+                        output[(i*2)+1] = sample;
+                    }
+                } else if (gain > 0.005) {
+                    reverb.clear();
                 }
             }
         }
@@ -493,17 +525,17 @@ void ofApp::readFiles(){
     grainSize = 5000;
     grainStart = 0;
     granulators.resize(numTextures);
-    granulators[0].openFile(ofToDataPath("cymbal.wav", true));
+    granulators[0].openFile(ofToDataPath("fire.wav", true));
     granulators[1].openFile(ofToDataPath("chimes.wav", true));
-    granulators[2].openFile(ofToDataPath("water.wav", true));
-    granulators[3].openFile(ofToDataPath("whistle.wav", true));
+    granulators[2].openFile(ofToDataPath("future.wav", true));
+    granulators[3].openFile(ofToDataPath("plectrum.wav", true));
     granulators[4].openFile(ofToDataPath("fiddle.wav", true));
     
     // Resize file/signal vectors
     playTexture.resize(numTextures);
     
     for (int i=0; i<numTextures; i++) {
-        playTexture[i] = false;
+        playTexture[i] = 0;
         granulators[i].setVoices(5);
         granulators[i].setGrainParameters(grainSize, 50, 0, 0, grainStart);
     }

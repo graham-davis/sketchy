@@ -5,6 +5,8 @@
 #include "math.h"
 #include "pixel.h"
 #include "Sticker.h"
+#include "FaustReverb.h"
+#include "smooth.h"
 
 //-----------------------------------------------------------------------------
 // Preprocessor definitions
@@ -50,7 +52,7 @@ private:
     void checkNearbyStickers(Pixel *pixel);
     void clearStrokes();
     
-    // Private variables
+    // Audio Variables
     bool audioReady;
     ofSoundStream soundStream;
     
@@ -60,7 +62,7 @@ private:
     
     // Texture variables
     int numTextures;
-    vector<bool> playTexture;
+    vector<float> playTexture;
     
     // GUI/Color Variables
     vector<ofColor> colors;
@@ -139,6 +141,7 @@ private:
     
     // Stroke variables
     int maxStrokes;
+    int maxPixelsPerStroke;
     int currentStroke;
     int currentStrokePixel;
     int maxStrokeLength;
@@ -149,4 +152,12 @@ private:
     vector<stk::Granulate> granulators;
     float grainSize;
     int grainStart;
+    
+    // Reverb variables
+    stk::FreeVerb reverb;
+    stk::StkFrames reverbBuffer;
+    
+    // Smoothers
+    vector<Smooth> onOff;
+    float gainValue;
 };

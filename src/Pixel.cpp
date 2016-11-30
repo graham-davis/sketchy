@@ -9,7 +9,9 @@
 #include "Pixel.h"
 
 Pixel::Pixel(){
-    opacity = 1;
+    radius = 0;
+    opacity = 0;
+    vel = ofVec3f(0, 0, 0);
     dissolving = false;
 }
 
