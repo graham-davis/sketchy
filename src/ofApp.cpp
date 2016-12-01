@@ -139,6 +139,7 @@ void ofApp::update(){
     }
     
     // Check if we should still be redrawing
+    redrawLock.lock();
     if (redrawPixel >= maxStrokeLength) {
         redraw = false;
         redrawPixel = 0;
@@ -146,6 +147,7 @@ void ofApp::update(){
         // Clear reverb delay lines
         reverb.clear();
     }
+    redrawLock.unlock();
     
     // If placing sticker, update brush sticker position
     if (placingSticker && !redraw) {
@@ -210,7 +212,9 @@ void ofApp::redrawPixels() {
         for (int j=0; j<redrawPixel; j++)
         strokes[i].pixels[j].draw(ww, wh);
     }
+    redrawLock.lock();
     redrawPixel++;
+    redrawLock.unlock();
 }
 
 void ofApp::drawPixels() {
@@ -347,8 +351,10 @@ void ofApp::drawStickerbox() {
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
     if (key==32){
+        redrawLock.lock();
         redraw = !redraw;
         redrawPixel = 0;
+        redrawLock.unlock();
     }
     if (key==127 && !redraw) {
         for(int i = 0; i < elementsDrawn; i++) {
@@ -528,6 +534,8 @@ void ofApp::drawAudio(float * output, int bufferSize, int j, float gain) {
     shift.setShift(2 * yRatio);
     shift.tick(outputFrames);
     reverb.tick(outputFrames);
+    std::cout << opacity << std::endl;
+
     
     for (int i = 0; i < bufferSize; i++) {
         sample = outputFrames(i, 0)*opacity;
@@ -546,6 +554,7 @@ void ofApp::redrawAudio(float * output, int bufferSize) {
     outputFrames.resize(bufferSize, 2, 0);
     
     for (int i = 0; i < currentStroke; i++) {
+        redrawLock.lock();
         if (redrawPixel < strokes[i].length) {
             Pixel currPixel = strokes[i].pixels[redrawPixel];
             ofVec3f position = currPixel.getPosition();
@@ -562,11 +571,11 @@ void ofApp::redrawAudio(float * output, int bufferSize) {
             shift.setShift(2 * yRatio);
             shift.tick(outputFrames);
             reverb.tick(outputFrames);
-            
             for (int j = 0; j < bufferSize; j++) {
                 samples[j] += outputFrames(j, 0)*currPixel.getOpacity();
             }
         }
+        redrawLock.unlock();
     }
     
     for (int k = 0; k < bufferSize; k++) {

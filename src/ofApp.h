@@ -172,4 +172,7 @@ private:
     // Smoothers
     vector<Smooth> onOff;
     float gainValue;
+    
+    // Mutex
+    mutex redrawLock;
 };
