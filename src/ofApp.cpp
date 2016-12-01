@@ -51,6 +51,7 @@ void ofApp::setup(){
     
     mouseX = 0;
     mouseY = 0;
+    mouseVel = 0;
     
     // Initialize GUI variables
     ww = 0;
@@ -89,7 +90,6 @@ void ofApp::setup(){
     
     // Initialize drawing variables
     redraw = false;
-    redrawSampleCount = 0;
     canDraw = false;
     drawing = false;
     mouseDown = false;
@@ -102,6 +102,8 @@ void ofApp::setup(){
     for (int i=0; i<numTextures; i++) {
         onOff[i].setSmooth(.8);
     }
+    redrawSmooth.setSmooth(.8);
+    redrawGain = 0;
     
     // Initialize reverb
     reverb.setEffectMix(0.3);
@@ -122,6 +124,9 @@ void ofApp::update(){
     ww = ofGetWindowWidth();
     wh = ofGetWindowHeight();
     
+    mouseVel = sqrt(pow((ofGetMouseX() - mouseX), 2) + pow((ofGetMouseY() - mouseY), 2));
+    if (mouseVel < 5) mouseVel = 5;
+    if (mouseVel > 50) mouseVel = 50;
     mouseX = ofGetMouseX();
     mouseY = ofGetMouseY();
     
@@ -129,6 +134,7 @@ void ofApp::update(){
     stickerIconSize = stickerBoxHeight * 0.75;
     sliderWidth = (toolbox.getWidth()/2) - (sliderStart * 2);
     
+   // brushRadius = mouseVel;
     brushRadius = minBrushRadius + (sliderPosition * maxBrushRadius);
     
     // Handle whether we can draw based on mouse location
@@ -141,11 +147,12 @@ void ofApp::update(){
     // Check if we should still be redrawing
     redrawLock.lock();
     if (redrawPixel >= maxStrokeLength) {
-        redraw = false;
-        redrawPixel = 0;
+        redraw = 0;
         
         // Clear reverb delay lines
-        reverb.clear();
+        if (maxStrokeLength != 0) {
+            reverb.clear();
+        }
     }
     redrawLock.unlock();
     
@@ -352,7 +359,13 @@ void ofApp::drawStickerbox() {
 void ofApp::keyPressed(int key){
     if (key==32){
         redrawLock.lock();
-        redraw = !redraw;
+        if (!redraw) {
+            redraw = 1;
+            redrawGain = redrawSmooth.tick(redraw);
+        } else {
+            redraw = 0;
+            redrawGain = 0;
+        }
         redrawPixel = 0;
         redrawLock.unlock();
     }
@@ -497,16 +510,25 @@ void ofApp::dragEvent(ofDragInfo dragInfo){
 //----------------------Audio Methods---------------------------
 void ofApp::audioOut(float * output, int bufferSize, int nChannels){
     if (audioReady) {
-        if (redraw) {
+        if (redrawGain > 0.005) {
             redrawAudio(output, bufferSize);
+            redrawGain = redrawSmooth.tick(redraw);
+        } else if (redrawGain > 0) {
+            redrawGain = 0;
+            redrawLock.lock();
+            redrawPixel = 0;
+            redrawLock.unlock();
+            reverb.clear();
+            shift.clear();
         } else {
-            if (redrawSampleCount) redrawSampleCount = 0;
+            float gain = 0;
             for (int j = 0; j < numTextures; j++) {
-                float gain = onOff[j].tick(playTexture[j]);
+                gain = onOff[j].tick(playTexture[j]);
                 if (gain > 0.01) {
                     drawAudio(output, bufferSize, j, gain);
                 } else if (gain > 0.005) {
                     reverb.clear();
+                    shift.clear();
                 }
             }
         }
@@ -534,11 +556,9 @@ void ofApp::drawAudio(float * output, int bufferSize, int j, float gain) {
     shift.setShift(2 * yRatio);
     shift.tick(outputFrames);
     reverb.tick(outputFrames);
-    std::cout << opacity << std::endl;
-
     
     for (int i = 0; i < bufferSize; i++) {
-        sample = outputFrames(i, 0)*opacity;
+        sample = outputFrames(i, 0)*opacity*gain;
         output[i*2] = sample;
         output[(i*2)+1] = sample;
     }
@@ -550,13 +570,12 @@ void ofApp::redrawAudio(float * output, int bufferSize) {
     for (int l = 0; l < bufferSize; l++) {
         samples[l] = 0.0;
     }
-    float gain = 1;
     outputFrames.resize(bufferSize, 2, 0);
     
     for (int i = 0; i < currentStroke; i++) {
         redrawLock.lock();
-        if (redrawPixel < strokes[i].length) {
-            Pixel currPixel = strokes[i].pixels[redrawPixel];
+        if (redrawPixel <= strokes[i].length) {
+            Pixel currPixel = strokes[i].pixels[redrawPixel-1];
             ofVec3f position = currPixel.getPosition();
             int pixelType = currPixel.getType();
             int pixelRadius = currPixel.getRadius();
@@ -572,16 +591,15 @@ void ofApp::redrawAudio(float * output, int bufferSize) {
             shift.tick(outputFrames);
             reverb.tick(outputFrames);
             for (int j = 0; j < bufferSize; j++) {
-                samples[j] += outputFrames(j, 0)*currPixel.getOpacity();
+                samples[j] += outputFrames(j, 0)*currPixel.getOpacity()*redrawGain;
             }
         }
         redrawLock.unlock();
     }
     
     for (int k = 0; k < bufferSize; k++) {
-        output[k*2] = (samples[k]*gain) / currentStroke;
-        output[(k*2)+1] = (samples[k]*gain) / currentStroke;
-        redrawSampleCount++;
+        output[k*2] = (samples[k]) / currentStroke;
+        output[(k*2)+1] = (samples[k]) / currentStroke;
     }
 }
 

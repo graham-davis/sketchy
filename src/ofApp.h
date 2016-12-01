@@ -61,6 +61,7 @@ private:
     // Mouse Variables
     float mouseX;
     float mouseY;
+    float mouseVel;
     
     // Texture variables
     int numTextures;
@@ -122,8 +123,7 @@ private:
     ofTrueTypeFont verdana;
     
     // Drawing variables
-    bool redraw;
-    int redrawSampleCount;
+    int redraw;
     
     bool canDraw;
     bool drawing;
@@ -170,8 +170,9 @@ private:
     stk::PitShift shift;
     
     // Smoothers
-    vector<Smooth> onOff;
-    float gainValue;
+    vector<Smooth> onOff;    
+    Smooth redrawSmooth;
+    float redrawGain;
     
     // Mutex
     mutex redrawLock;
