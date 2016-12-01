@@ -35,7 +35,7 @@ void ofApp::setup(){
     redrawPixel = 0;
     strokes.resize(maxStrokes);
     for (int i=0; i<maxStrokes; i++) {
-        strokes[i].resize(maxPixelsPerStroke);
+        strokes[i].pixels.resize(maxPixelsPerStroke);
     }
     
     // Initialize program colors
@@ -52,7 +52,7 @@ void ofApp::setup(){
     mouseX = 0;
     mouseY = 0;
     
-    // Initialize GUI varialbes
+    // Initialize GUI variables
     ww = 0;
     wh = 0;
     bufferWidth = 16;
@@ -65,7 +65,7 @@ void ofApp::setup(){
     toolboxWidth = ww-(bufferWidth*8);
     textureBoxWidth = (toolboxWidth/2)/numTextures - (bufferWidth);
     sliderHeight = 4;
-    sliderPosition = 0;
+    sliderPosition = 0.5;
     sliding = false;
     sliderStart = bufferWidth*4;
     selectedTexture = -1;
@@ -89,6 +89,7 @@ void ofApp::setup(){
     
     // Initialize drawing variables
     redraw = false;
+    redrawSampleCount = 0;
     canDraw = false;
     drawing = false;
     mouseDown = false;
@@ -103,8 +104,12 @@ void ofApp::setup(){
     }
     
     // Initialize reverb
-    reverb.setEffectMix(0.4);
-    reverb.setRoomSize(0.8);
+    reverb.setEffectMix(0.3);
+    reverb.setRoomSize(0.6);
+    
+    // Initialize pitch shift
+    shift.clear();
+    shift.setShift(1.0);
     
     // Read audio files into buffers
     readFiles();
@@ -133,6 +138,15 @@ void ofApp::update(){
         canDraw = true;
     }
     
+    // Check if we should still be redrawing
+    if (redrawPixel >= maxStrokeLength) {
+        redraw = false;
+        redrawPixel = 0;
+        
+        // Clear reverb delay lines
+        reverb.clear();
+    }
+    
     // If placing sticker, update brush sticker position
     if (placingSticker && !redraw) {
         brushSticker.setPosition((mouseX - (stickerIconSize/2))/ww, (mouseY - (stickerIconSize/2))/wh);
@@ -141,6 +155,8 @@ void ofApp::update(){
     // If drawing is allowed and mouse is down, add pixel
     if (selectedTexture != -1 && canDraw && mouseDown && elementsDrawn < maxDrawnElements && !dissolvingPixels) {
         drawing = true;
+        
+        // Build new Pixel
         Pixel newPixel;
         newPixel.setPosition(ofVec3f(mouseX/ww, mouseY/wh, 0));
         newPixel.setVelocity(0, 0, 0);
@@ -148,10 +164,15 @@ void ofApp::update(){
         newPixel.setColor(colors[selectedTexture]);
         newPixel.setOpacity(opacity);
         newPixel.setType(selectedTexture);
+        
+        // Add pixel to list of drawn elements
         pixels[elementsDrawn] = newPixel;
-        strokes[currentStroke%maxStrokes][currentStrokePixel%maxPixelsPerStroke] = newPixel;
-        currentStrokePixel++;
         elementsDrawn++;
+        
+        // Update current Stroke
+        strokes[currentStroke%maxStrokes].pixels[currentStrokePixel%maxPixelsPerStroke] = newPixel;
+        strokes[currentStroke%maxStrokes].length++;
+        currentStrokePixel++;
     }
 }
 
@@ -187,12 +208,9 @@ void ofApp::drawStickers() {
 void ofApp::redrawPixels() {
     for (int i=0; i<currentStroke; i++) {
         for (int j=0; j<redrawPixel; j++)
-        strokes[i][j].draw(ww, wh);
+        strokes[i].pixels[j].draw(ww, wh);
     }
-    if (++redrawPixel >= maxStrokeLength) {
-        redraw = false;
-        redrawPixel = 0;
-    }
+    redrawPixel++;
 }
 
 void ofApp::drawPixels() {
@@ -343,9 +361,10 @@ void ofApp::keyPressed(int key){
 }
 
 void ofApp::clearStrokes(){
-    for (int i=0; i<maxStrokes; i++) {
-        strokes[i].clear();
-        strokes[i].resize(500);
+    for (int i=0; i<currentStroke; i++) {
+        strokes[i].pixels.clear();
+        strokes[i].pixels.resize(500);
+        strokes[i].length = 0;
     }
     maxStrokeLength = 0;
     currentStroke = 0;
@@ -473,49 +492,87 @@ void ofApp::dragEvent(ofDragInfo dragInfo){
 void ofApp::audioOut(float * output, int bufferSize, int nChannels){
     if (audioReady) {
         if (redraw) {
-            float sample = 0;
-            Pixel currPixel = strokes[0][redrawPixel];
-            ofVec3f position = currPixel.getPosition();
-            int pixelType = currPixel.getType();
-            granulators[pixelType].setGrainParameters(currPixel.getRadius()*500, 100*position[1], 0, 0, granulators[pixelType].fileSize()*position[0]);
-            reverbBuffer.resize(bufferSize, 2, 0);
-            granulators[pixelType].tick(reverbBuffer);
-            reverb.tick(reverbBuffer);
-            for (int i = 0; i < bufferSize; i++) {
-                sample = reverbBuffer(i, 0)*currPixel.getOpacity();
-                output[i*2] = sample;
-                output[(i*2)+1] = sample;
-            }
+            redrawAudio(output, bufferSize);
         } else {
-            float sample = 0;
+            if (redrawSampleCount) redrawSampleCount = 0;
             for (int j = 0; j < numTextures; j++) {
                 float gain = onOff[j].tick(playTexture[j]);
                 if (gain > 0.01) {
-                    reverbBuffer.resize(bufferSize, 2, 0);
-                    grainSize = brushRadius*500;
-                    float fileSize = granulators[j].fileSize();
-                    float xRatio = mouseX / ww;
-                    if (xRatio < 0) xRatio = 0;
-                    if (xRatio > 0.99) xRatio = 0.99;
-                    
-                    float yRatio = mouseY / wh;
-                    if (yRatio < 0) yRatio = 0;
-                    if (yRatio > 1) yRatio = 1;
-                    
-                    grainStart = xRatio * fileSize;
-                    granulators[j].setGrainParameters(grainSize, 100*yRatio, 0, 0, grainStart);
-                    granulators[j].tick(reverbBuffer);
-                    reverb.tick(reverbBuffer);
-                    for (int i = 0; i < bufferSize; i++) {
-                        sample = reverbBuffer(i, 0)*opacity*gain;
-                        output[i*2] = sample;
-                        output[(i*2)+1] = sample;
-                    }
+                    drawAudio(output, bufferSize, j, gain);
                 } else if (gain > 0.005) {
                     reverb.clear();
                 }
             }
         }
+    }
+}
+
+void ofApp::drawAudio(float * output, int bufferSize, int j, float gain) {
+    float sample = 0;
+    outputFrames.resize(MY_BUFFERSIZE, 2, 0);
+    
+    // Get granular settings
+    grainSize = brushRadius*500;
+    float fileSize = granulators[j].fileSize();
+    float xRatio = mouseX / ww;
+    if (xRatio < 0) xRatio = 0;
+    if (xRatio > 0.99) xRatio = 0.99;
+    float yRatio = 1 - ((mouseY-topNavHeight) / wh);
+    if (yRatio > 1) yRatio = 1;
+    if (yRatio < 0) yRatio = 0;
+    grainStart = xRatio * fileSize;
+    
+    // Compute audio
+    granulators[j].setGrainParameters(grainSize, 75, 0, 0, grainStart);
+    granulators[j].tick(outputFrames);
+    shift.setShift(2 * yRatio);
+    shift.tick(outputFrames);
+    reverb.tick(outputFrames);
+    
+    for (int i = 0; i < bufferSize; i++) {
+        sample = outputFrames(i, 0)*opacity;
+        output[i*2] = sample;
+        output[(i*2)+1] = sample;
+    }
+}
+
+
+void ofApp::redrawAudio(float * output, int bufferSize) {
+    float samples[bufferSize];
+    for (int l = 0; l < bufferSize; l++) {
+        samples[l] = 0.0;
+    }
+    float gain = 1;
+    outputFrames.resize(bufferSize, 2, 0);
+    
+    for (int i = 0; i < currentStroke; i++) {
+        if (redrawPixel < strokes[i].length) {
+            Pixel currPixel = strokes[i].pixels[redrawPixel];
+            ofVec3f position = currPixel.getPosition();
+            int pixelType = currPixel.getType();
+            int pixelRadius = currPixel.getRadius();
+            int grainStart = granulators[pixelType].fileSize()*position[0];
+
+            granulators[pixelType].setGrainParameters(pixelRadius*500, 0, 0, 0, grainStart);
+            granulators[pixelType].tick(outputFrames);
+            float yRatio = 1 - (position[1] - (topNavHeight/wh));
+            if (yRatio > 1) yRatio = 1;
+            if (yRatio < 0) yRatio = 0;
+            
+            shift.setShift(2 * yRatio);
+            shift.tick(outputFrames);
+            reverb.tick(outputFrames);
+            
+            for (int j = 0; j < bufferSize; j++) {
+                samples[j] += outputFrames(j, 0)*currPixel.getOpacity();
+            }
+        }
+    }
+    
+    for (int k = 0; k < bufferSize; k++) {
+        output[k*2] = (samples[k]*gain) / currentStroke;
+        output[(k*2)+1] = (samples[k]*gain) / currentStroke;
+        redrawSampleCount++;
     }
 }
 

@@ -40,6 +40,8 @@ public:
     
 private:
     // Private member functions
+    void drawAudio(float *input, int bufferSize, int j, float gain);
+    void redrawAudio(float *input, int bufferSize);
     void readFiles();
     void drawTopNav();
     void drawToolbox();
@@ -121,6 +123,8 @@ private:
     
     // Drawing variables
     bool redraw;
+    int redrawSampleCount;
+    
     bool canDraw;
     bool drawing;
     bool mouseDown;
@@ -140,13 +144,18 @@ private:
     vector<Sticker> canvasStickers;
     
     // Stroke variables
+    struct stroke {
+        int length;
+        vector<Pixel> pixels;
+    };
     int maxStrokes;
     int maxPixelsPerStroke;
     int currentStroke;
     int currentStrokePixel;
     int maxStrokeLength;
     int redrawPixel;
-    vector<vector<Pixel>> strokes;
+    
+    vector<stroke> strokes;
     
     // Granular variables
     vector<stk::Granulate> granulators;
@@ -155,7 +164,10 @@ private:
     
     // Reverb variables
     stk::FreeVerb reverb;
-    stk::StkFrames reverbBuffer;
+    stk::StkFrames outputFrames;
+    
+    // Pitch shift variables
+    stk::PitShift shift;
     
     // Smoothers
     vector<Smooth> onOff;
