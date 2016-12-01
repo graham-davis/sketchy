@@ -52,6 +52,8 @@ void ofApp::setup(){
     mouseX = 0;
     mouseY = 0;
     mouseVel = 0;
+    useVelocity = false;
+    shiftKey = false;
     
     // Initialize GUI variables
     ww = 0;
@@ -77,14 +79,18 @@ void ofApp::setup(){
     
     textureBoxes.resize(numTextures);
     
+    // Dissolve variables
+    dissolvingPixels = false;
+    pixelsToDissolve = 0;
+    
     // Initialize font
     verdana.load("verdana.ttf", 40);
     verdana.setLineHeight(40.0f);
     verdana.setLetterSpacing(1.035);
     
     // Initialize brush variables
-    minBrushRadius = 8;
-    maxBrushRadius = 36;
+    minBrushRadius = 5;
+    maxBrushRadius = 70;
     brushRadius = 20;
     opacity = 1;
     
@@ -125,20 +131,25 @@ void ofApp::update(){
     wh = ofGetWindowHeight();
     
     mouseVel = sqrt(pow((ofGetMouseX() - mouseX), 2) + pow((ofGetMouseY() - mouseY), 2));
-    if (mouseVel < 5) mouseVel = 5;
-    if (mouseVel > 50) mouseVel = 50;
+    if (mouseVel < minBrushRadius) mouseVel = minBrushRadius;
+    if (mouseVel > maxBrushRadius) mouseVel = maxBrushRadius;
     mouseX = ofGetMouseX();
     mouseY = ofGetMouseY();
+    
+    if (useVelocity) {
+        opacity = mouseVel / maxBrushRadius;
+        brushRadius = mouseVel;
+    } else {
+        brushRadius = minBrushRadius + (sliderPosition * maxBrushRadius);
+    }
     
     toolboxHeight = wh * .2;
     stickerIconSize = stickerBoxHeight * 0.75;
     sliderWidth = (toolbox.getWidth()/2) - (sliderStart * 2);
     
-   // brushRadius = mouseVel;
-    brushRadius = minBrushRadius + (sliderPosition * maxBrushRadius);
     
     // Handle whether we can draw based on mouse location
-    if (redraw || placingSticker || (drawSettings && toolbox.inside(mouseX, mouseY)) || mouseY <= topNavHeight || (drawStickerMenu && stickerBox.inside(mouseX, mouseY))) {
+    if (sliding || redraw || placingSticker || (drawSettings && toolbox.inside(mouseX, mouseY)) || mouseY <= topNavHeight || (drawStickerMenu && stickerBox.inside(mouseX, mouseY))) {
         canDraw = false;
     } else {
         canDraw = true;
@@ -231,8 +242,9 @@ void ofApp::drawPixels() {
         float pixelRad = pixels[i].getRadius();
         if (pixelPos[0] < 0 || pixelPos[0] >  1 || pixelPos[1] < 0 || pixelPos[1] > 1 || pixelRad < 0.5) {
             pixels[i] = pixels[elementsDrawn];
+            pixelsToDissolve--;
             elementsDrawn--;
-            if (elementsDrawn == 0 && dissolvingPixels) {
+            if (pixelsToDissolve == 0 && dissolvingPixels) {
                 dissolvingPixels = false;
             }
         } else {
@@ -321,7 +333,7 @@ void ofApp::drawToolbox() {
         } else {
             ofSetColor(colors[i], 140);
         }
-        textureBoxes[i].set(toolboxCenter[0]+(textureBoxWidth*(i))+(bufferWidth*(i+1)), wh-(toolboxHeight-2*bufferHeight), textureBoxWidth, toolboxHeight-(4*bufferHeight));
+        textureBoxes[i].set(toolboxCenter[0]+(textureBoxWidth*i)+(bufferWidth*(i+4)), wh-(toolboxHeight-2*bufferHeight), textureBoxWidth, toolboxHeight-(4*bufferHeight));
         ofDrawRectangle(textureBoxes[i]);
     }
     drawSizeSlider();
@@ -357,7 +369,9 @@ void ofApp::drawStickerbox() {
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
-    if (key==32){
+    if (key==OF_KEY_SHIFT) {
+        shiftKey = true;
+    } else if (key==32){
         redrawLock.lock();
         if (!redraw) {
             redraw = 1;
@@ -368,14 +382,24 @@ void ofApp::keyPressed(int key){
         }
         redrawPixel = 0;
         redrawLock.unlock();
-    }
-    if (key==127 && !redraw) {
-        for(int i = 0; i < elementsDrawn; i++) {
-            pixels[i].dissolve();
-            pixels[i].setVelocity(ofRandom(-.05, .05), ofRandom(-.05, .05), ofRandom(-5, 5));
-            dissolvingPixels = true;
+    } else if (key==127 && !redraw) {
+        if (shiftKey) {
+            for(int i = 0; i < elementsDrawn; i++) {
+                pixels[i].dissolve();
+                pixels[i].setVelocity(ofRandom(-.05, .05), ofRandom(-.05, .05), ofRandom(-5, 5));
+                pixelsToDissolve = elementsDrawn;
+                dissolvingPixels = true;
+            }
+            clearStrokes();
+        } else {
+            stroke newest = strokes[currentStroke-1];
+            for (int i = 0; i < newest.length; i++) {
+                pixels[elementsDrawn-1-i].dissolve();
+                pixels[elementsDrawn-1-i].setVelocity(ofRandom(-.05, .05), ofRandom(-.05, .05), ofRandom(-5, 5));
+                pixelsToDissolve = newest.length;
+                dissolvingPixels = true;
+            }
         }
-        clearStrokes();
     }
 }
 
@@ -392,7 +416,9 @@ void ofApp::clearStrokes(){
 
 //--------------------------------------------------------------
 void ofApp::keyReleased(int key){
-
+    if (key==OF_KEY_SHIFT) {
+        shiftKey = false;
+    }
 }
 
 //--------------------------------------------------------------

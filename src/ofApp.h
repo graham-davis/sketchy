@@ -58,10 +58,12 @@ private:
     bool audioReady;
     ofSoundStream soundStream;
     
-    // Mouse Variables
+    // Keyboard / Mouse Variables
     float mouseX;
     float mouseY;
     float mouseVel;
+    bool useVelocity;
+    bool shiftKey;
     
     // Texture variables
     int numTextures;
@@ -130,6 +132,7 @@ private:
     bool mouseDown;
     int maxDrawnElements;
     int elementsDrawn;
+    int pixelsToDissolve;
     bool dissolvingPixels;
     vector<Pixel> pixels;
     
