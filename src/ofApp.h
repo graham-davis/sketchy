@@ -53,6 +53,7 @@ private:
     void drawStickers();
     void checkNearbyStickers(Pixel *pixel);
     void clearStrokes();
+    void clearSingleStroke();
     
     // Audio Variables
     bool audioReady;
@@ -98,14 +99,20 @@ private:
     ofImage tileIcon;
     ofImage settingsIcon;
     ofImage stickersIcon;
+    ofImage undoIcon;
+    ofImage trashIcon;
     float tileIconHeight;
     bool drawGrid;
     bool drawSettings;
     bool drawStickerMenu;
+    bool trashing;
+    bool undoing;
     
     ofRectangle tileGhost;
     ofRectangle settingsGhost;
     ofRectangle stickersGhost;
+    ofRectangle undoGhost;
+    ofRectangle trashGhost;
     
     // Toolbox variables
     float toolboxHeight;
@@ -149,10 +156,15 @@ private:
     // Stroke variables
     struct stroke {
         int length;
+        int numStickers;
         vector<Pixel> pixels;
+        vector<Sticker> stickers;
+        int repeat = 0;
+        int delay = 0;
     };
     int maxStrokes;
     int maxPixelsPerStroke;
+    int maxStickersPerStroke;
     int currentStroke;
     int currentStrokePixel;
     int maxStrokeLength;
