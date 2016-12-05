@@ -41,9 +41,6 @@ void Pixel::draw(float ww, float wh){
     if (dissolving) {
         radius = radius * 0.85;
     }
-//    pos[0] = pos[0]+vel[0];
-//    pos[1] = pos[1]+vel[1];
-//    pos[2] = pos[2]+vel[2];
-    ofSetColor(color, 256*opacity);
+    ofSetColor(color, 255*opacity);
     ofDrawCircle(pos[0]*ww, pos[1]*wh, pos[2], radius);
 }

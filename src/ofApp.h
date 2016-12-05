@@ -7,6 +7,7 @@
 #include "Sticker.h"
 #include "FaustReverb.h"
 #include "smooth.h"
+#include "ofGLRenderer.h"
 
 //-----------------------------------------------------------------------------
 // Preprocessor definitions
@@ -48,6 +49,7 @@ private:
     void drawFullGrid();
     void drawPixels();
     void redrawPixels();
+    void drawStroke(int index);
     void drawSizeSlider();
     void drawStickerbox();
     void drawStickers();
@@ -163,7 +165,12 @@ private:
         vector<Pixel> pixels;
         vector<Sticker> stickers;
         bool redrawing;
+        bool redrawFinished;
         int playbackPixel;
+        int textureType;
+        
+        // Sticker variables
+        int macros[5];
     };
     vector<bool> redrawingTexture;
     int maxStrokes;

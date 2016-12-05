@@ -165,18 +165,6 @@ void ofApp::update(){
         canDraw = true;
     }
     
-    // Check if we should still be redrawing
-    redrawLock.lock();
-    if (redrawPixel >= maxStrokeLength) {
-        redraw = 0;
-        
-        // Clear reverb delay lines
-        if (maxStrokeLength != 0) {
-            reverb.clear();
-        }
-    }
-    redrawLock.unlock();
-    
     // If placing sticker, update brush sticker position
     if (placingSticker && !redraw) {
         brushSticker.setPosition((mouseX - (stickerIconSize/2))/ww, (mouseY - (stickerIconSize/2))/wh);
@@ -243,13 +231,45 @@ void ofApp::drawStickers() {
 }
 
 void ofApp::redrawPixels() {
+    bool strokesToRedraw = false;
     for (int i=0; i<currentStroke; i++) {
-        for (int j=0; j<redrawPixel; j++)
-        strokes[i].pixels[j].draw(ww, wh);
+        stroke currStroke = strokes[i];
+        if (!currStroke.redrawFinished) {
+            strokesToRedraw = true;
+            if (!currStroke.redrawing && !redrawingTexture[currStroke.textureType]) {
+                strokes[i].redrawing = true;
+                redrawingTexture[currStroke.textureType] = true;
+            }
+        } else {
+            drawStroke(i);
+        }
+        if (currStroke.redrawing) {
+            if (currStroke.playbackPixel == currStroke.length) {
+                drawStroke(i);
+                strokes[i].redrawFinished = true;
+                strokes[i].redrawing = false;
+                redrawingTexture[currStroke.textureType] = false;
+            } else {
+                for (int j=0; j<currStroke.playbackPixel; j++) {
+                    currStroke.pixels[j].draw(ww, wh);
+                }
+                redrawLock.lock();
+                strokes[i].playbackPixel++;
+                redrawLock.unlock();
+            }
+        }
     }
-    redrawLock.lock();
-    redrawPixel++;
-    redrawLock.unlock();
+    if (!strokesToRedraw) {
+        redraw = 0;
+        
+        reverb.clear();
+    }
+}
+
+void ofApp::drawStroke(int index) {
+    for (int j = 0; j < strokes[index].length; j++) {
+        strokes[index].pixels[j].draw(ww, wh);
+    }
 }
 
 void ofApp::drawPixels() {
@@ -416,6 +436,11 @@ void ofApp::keyPressed(int key){
     if (key==OF_KEY_SHIFT) {
         shiftKey = true;
     } else if (key==32){
+        for (int i = 0; i < currentStroke; i++) {
+            strokes[i].redrawFinished = false;
+            strokes[i].playbackPixel = 0;
+            strokes[i].redrawing = false;
+        }
         redrawLock.lock();
         if (!redraw) {
             redraw = 1;
@@ -423,6 +448,7 @@ void ofApp::keyPressed(int key){
         } else {
             redraw = 0;
             redrawGain = 0;
+            reverb.clear();
         }
         redrawPixel = 0;
         redrawLock.unlock();
@@ -470,6 +496,9 @@ void ofApp::clearStrokes(){
         strokes[i].pixels.clear();
         strokes[i].pixels.resize(500);
         strokes[i].length = 0;
+        for (int j = 0; j < 5; j++) {
+            strokes[i].macros[j] = 0;
+        }
     }
     maxStrokeLength = 0;
     currentStroke = 0;
@@ -534,6 +563,7 @@ void ofApp::mousePressed(int x, int y, int button){
     } else if (stickersGhost.inside(x, y)) {
         drawStickerMenu = !drawStickerMenu;
     } else if (canDraw && selectedTexture != -1) {
+        strokes[currentStroke].textureType = selectedTexture;
         playTexture[selectedTexture] = 1;
     } else if (sliderCircle.inside(x, y)) {
         sliding = true;
@@ -568,13 +598,7 @@ void ofApp::mouseReleased(int x, int y, int button){
             stickersAdded++;
             
             if (currentStroke > 0) {
-                switch (newSticker.getType()) {
-                    case 4:
-                        break;
-                    default:
-                        break;
-                }
-
+                strokes[currentStroke].macros[newSticker.getType()]++;
             }
         }
         placingSticker = false;
@@ -677,8 +701,8 @@ void ofApp::redrawAudio(float * output, int bufferSize) {
     
     for (int i = 0; i < currentStroke; i++) {
         redrawLock.lock();
-        if (redrawPixel <= strokes[i].length) {
-            Pixel currPixel = strokes[i].pixels[redrawPixel-1];
+        if (strokes[i].redrawing) {
+            Pixel currPixel = strokes[i].pixels[strokes[i].playbackPixel];
             int pixelType = currPixel.getType();
             if (pixelType >= 0 && pixelType < 5) {
                 ofVec3f position = currPixel.getPosition();
@@ -704,8 +728,8 @@ void ofApp::redrawAudio(float * output, int bufferSize) {
     }
     
     for (int k = 0; k < bufferSize; k++) {
-        output[k*2] = (samples[k]) / currentStroke;
-        output[(k*2)+1] = (samples[k]) / currentStroke;
+        output[k*2] = (samples[k]) / numTextures;
+        output[(k*2)+1] = (samples[k]) / numTextures;
     }
 }
 
