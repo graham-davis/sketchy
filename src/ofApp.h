@@ -54,6 +54,7 @@ private:
     void checkNearbyStickers(Pixel *pixel);
     void clearStrokes();
     void clearSingleStroke();
+    void clearStickers();
     
     // Audio Variables
     bool audioReady;
@@ -74,6 +75,7 @@ private:
     vector<ofColor> colors;
     ofColor offWhite;
     ofColor lightGrey;
+    ofColor mediumGrey;
     ofColor darkGrey;
     
     ofRectangle topNav;
@@ -135,6 +137,7 @@ private:
     int redraw;
     
     bool canDraw;
+    bool clickCheck;
     bool drawing;
     bool mouseDown;
     int maxDrawnElements;
@@ -159,9 +162,10 @@ private:
         int numStickers;
         vector<Pixel> pixels;
         vector<Sticker> stickers;
-        int repeat = 0;
-        int delay = 0;
+        bool redrawing;
+        int playbackPixel;
     };
+    vector<bool> redrawingTexture;
     int maxStrokes;
     int maxPixelsPerStroke;
     int maxStickersPerStroke;

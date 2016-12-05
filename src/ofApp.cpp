@@ -1,4 +1,4 @@
-#include "ofApp.h"
+ #include "ofApp.h"
 
 //--------------------------------------------------------------
 void ofApp::setup(){
@@ -8,11 +8,11 @@ void ofApp::setup(){
     numTextures = 5;
     
     // Initialize top nav variables
-    tileIcon.load(ofToDataPath("tile.png", true));
-    settingsIcon.load(ofToDataPath("settings.png", true));
-    stickersIcon.load(ofToDataPath("sticker.png", true));
-    undoIcon.load(ofToDataPath("undo.png", true));
-    trashIcon.load(ofToDataPath("trash.png", true));
+    tileIcon.load(ofToDataPath("tileSketch.png", true));
+    settingsIcon.load(ofToDataPath("settingsSketch.png", true));
+    stickersIcon.load(ofToDataPath("stickerSketch.png", true));
+    undoIcon.load(ofToDataPath("undoSketch.png", true));
+    trashIcon.load(ofToDataPath("trashSketch.png", true));
     tileIconHeight = 50;
     
     // Initialize sticker variables
@@ -38,8 +38,10 @@ void ofApp::setup(){
     redrawPixel = 0;
     strokes.resize(maxStrokes);
     for (int i=0; i<maxStrokes; i++) {
+        strokes[i].redrawing = false;
         strokes[i].pixels.resize(maxPixelsPerStroke);
         strokes[i].stickers.resize(maxStickersPerStroke);
+        strokes[i].playbackPixel = 0;
     }
     
     // Initialize program colors
@@ -51,6 +53,7 @@ void ofApp::setup(){
     colors[4] = ofColor(80, 81, 79);
     offWhite = ofColor(240, 240, 240);
     lightGrey = ofColor(220, 220, 220);
+    mediumGrey = ofColor(190, 190, 190);
     darkGrey = ofColor(160, 160, 160);
     
     mouseX = 0;
@@ -90,7 +93,7 @@ void ofApp::setup(){
     pixelsToDissolve = 0;
     
     // Initialize font
-    verdana.load("verdana.ttf", 40);
+    verdana.load("denne.ttf", 50);
     verdana.setLineHeight(40.0f);
     verdana.setLetterSpacing(1.035);
     
@@ -103,6 +106,7 @@ void ofApp::setup(){
     // Initialize drawing variables
     redraw = false;
     canDraw = false;
+    clickCheck = true;
     drawing = false;
     mouseDown = false;
     maxDrawnElements = 10000;
@@ -155,7 +159,7 @@ void ofApp::update(){
     
     
     // Handle whether we can draw based on mouse location
-    if (sliding || redraw || placingSticker || (drawSettings && toolbox.inside(mouseX, mouseY)) || mouseY <= topNavHeight || (drawStickerMenu && stickerBox.inside(mouseX, mouseY))) {
+    if (sliding || redraw || placingSticker || (drawSettings && toolbox.inside(mouseX, mouseY)) || mouseY <= topNavHeight || (drawStickerMenu && stickerBox.inside(mouseX, mouseY)) || !clickCheck) {
         canDraw = false;
     } else {
         canDraw = true;
@@ -226,8 +230,15 @@ void ofApp::draw(){
 }
 
 void ofApp::drawStickers() {
-    for (int i=0; i<stickersAdded; i++) {
-        canvasStickers[i].draw(ww, wh);
+    int i = 0;
+    while (i < stickersAdded) {
+        if (canvasStickers[i].isPopped()) {
+            canvasStickers[i] = canvasStickers[stickersAdded];
+            stickersAdded--;
+        } else {
+            canvasStickers[i].draw(ww, wh);
+            i++;
+        }
     }
 }
 
@@ -308,26 +319,26 @@ void ofApp::drawTopNav() {
     verdana.drawString("Sketchy", bufferWidth*2, (topNavHeight/2)+20);
     
     // Trash icon
-    if (!trashing) ofSetColor(190, 190, 190);
+    if (!trashing) ofSetColor(mediumGrey);
     trashIcon.draw(ww-tileIconHeight-bufferWidth*2, (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
     
     // Undo icon
     if (!undoing) {
-        ofSetColor(190, 190, 190);
+        ofSetColor(mediumGrey);
     } else {
         ofSetColor(colors[0]);
     }
     undoIcon.draw(ww-(tileIconHeight*2)-(bufferWidth*4), (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
     
     // Dividing Line
-    ofSetColor(lightGrey);
+    ofSetColor(mediumGrey);
     ofSetLineWidth(3);
     ofDrawLine(ww-(tileIconHeight*2)-(bufferWidth*6), bufferHeight*2, ww-(tileIconHeight*2)-(bufferWidth*6), topNavHeight-(bufferHeight*2));
     ofSetLineWidth(1);
     
     // Draw grid icon
     if (!drawGrid) {
-        ofSetColor(lightGrey);
+        ofSetColor(mediumGrey);
     } else {
         ofSetColor(colors[0]);
     }
@@ -336,7 +347,7 @@ void ofApp::drawTopNav() {
     
     // Draw settings icon
     if (!drawSettings) {
-        ofSetColor(lightGrey);
+        ofSetColor(mediumGrey);
     } else {
         ofSetColor(colors[0]);
     }
@@ -344,7 +355,7 @@ void ofApp::drawTopNav() {
     
     //Draw stickers icon
     if (!drawStickerMenu) {
-        ofSetColor(lightGrey);
+        ofSetColor(mediumGrey);
     } else {
         ofSetColor(colors[0]);
     }
@@ -415,11 +426,16 @@ void ofApp::keyPressed(int key){
         }
         redrawPixel = 0;
         redrawLock.unlock();
-    } else if (key==127 && !redraw && currentStroke != 0 && !dissolvingPixels) {
-        if (shiftKey) {
-            clearStrokes();
-        } else {
-            clearSingleStroke();
+    } else if (key==127 && !redraw && !dissolvingPixels) {
+        if (currentStroke != 0) {
+            if (shiftKey) {
+                clearStrokes();
+            } else {
+                clearSingleStroke();
+            }
+        }
+        if (stickersAdded != 0) {
+            clearStickers();
         }
     }
 }
@@ -458,6 +474,12 @@ void ofApp::clearStrokes(){
     maxStrokeLength = 0;
     currentStroke = 0;
     currentStrokePixel = 0;
+}
+
+void ofApp::clearStickers() {
+    for (int i = 0; i < stickersAdded; i++) {
+        canvasStickers[i].pop();
+    }
 }
 
 //--------------------------------------------------------------
@@ -521,12 +543,15 @@ void ofApp::mousePressed(int x, int y, int button){
     } else if (trashGhost.inside(x, y) && !redraw && currentStroke != 0 && !dissolvingPixels) {
         trashing = true;
         clearStrokes();
+    } else if (topNav.inside(x, y) || toolbox.inside(x, y)) {
+        clickCheck = false;
     }
 }
 
 //--------------------------------------------------------------
 void ofApp::mouseReleased(int x, int y, int button){
     mouseDown = false;
+    clickCheck = true;
     if (drawing) {
         if (selectedTexture != -1) playTexture[selectedTexture] = 0;
         currentStroke++;
@@ -545,7 +570,6 @@ void ofApp::mouseReleased(int x, int y, int button){
             if (currentStroke > 0) {
                 switch (newSticker.getType()) {
                     case 4:
-                        strokes[currentStroke].delay++;
                         break;
                     default:
                         break;
@@ -635,9 +659,9 @@ void ofApp::drawAudio(float * output, int bufferSize, int j, float gain) {
     shift.setShift(2 * yRatio);
     shift.tick(outputFrames);
     reverb.tick(outputFrames);
-    
+
     for (int i = 0; i < bufferSize; i++) {
-        sample = outputFrames(i, 0)*opacity*gain;
+        sample = outputFrames(i, 0)*gain*opacity;
         output[i*2] = sample;
         output[(i*2)+1] = sample;
     }
@@ -655,22 +679,24 @@ void ofApp::redrawAudio(float * output, int bufferSize) {
         redrawLock.lock();
         if (redrawPixel <= strokes[i].length) {
             Pixel currPixel = strokes[i].pixels[redrawPixel-1];
-            ofVec3f position = currPixel.getPosition();
             int pixelType = currPixel.getType();
-            int pixelRadius = currPixel.getRadius();
-            int grainStart = granulators[pixelType].fileSize()*position[0];
-            if (pixelRadius) {
-                granulators[pixelType].setGrainParameters(pixelRadius*500, 0, 0, 0, grainStart);
-                granulators[pixelType].tick(outputFrames);
-                float yRatio = 1 - (position[1] - (topNavHeight/wh));
-                if (yRatio > 1) yRatio = 1;
-                if (yRatio < 0) yRatio = 0;
-                
-                shift.setShift(2 * yRatio);
-                shift.tick(outputFrames);
-                reverb.tick(outputFrames);
-                for (int j = 0; j < bufferSize; j++) {
-                    samples[j] += outputFrames(j, 0)*currPixel.getOpacity()*redrawGain;
+            if (pixelType >= 0 && pixelType < 5) {
+                ofVec3f position = currPixel.getPosition();
+                int pixelRadius = currPixel.getRadius();
+                int grainStart = granulators[pixelType].fileSize()*position[0];
+                if (pixelRadius) {
+                    granulators[pixelType].setGrainParameters(pixelRadius*500, 0, 0, 0, grainStart);
+                    granulators[pixelType].tick(outputFrames);
+                    float yRatio = 1 - (position[1] - (topNavHeight/wh));
+                    if (yRatio > 1) yRatio = 1;
+                    if (yRatio < 0) yRatio = 0;
+                    
+                    shift.setShift(2 * yRatio);
+                    shift.tick(outputFrames);
+                    reverb.tick(outputFrames);
+                    for (int j = 0; j < bufferSize; j++) {
+                        samples[j] += outputFrames(j, 0)*currPixel.getOpacity()*redrawGain;
+                    }
                 }
             }
         }
@@ -691,16 +717,18 @@ void ofApp::readFiles(){
     granulators.resize(numTextures);
     granulators[0].openFile(ofToDataPath("fire.wav", true));
     granulators[1].openFile(ofToDataPath("chimes.wav", true));
-    granulators[2].openFile(ofToDataPath("future.wav", true));
+    granulators[2].openFile(ofToDataPath("birds.wav", true));
     granulators[3].openFile(ofToDataPath("plectrum.wav", true));
     granulators[4].openFile(ofToDataPath("fiddle.wav", true));
     
     // Resize file/signal vectors
     playTexture.resize(numTextures);
+    redrawingTexture.resize(numTextures);
     
     for (int i=0; i<numTextures; i++) {
         playTexture[i] = 0;
-        granulators[i].setVoices(5);
+        redrawingTexture[i] = false;
+        granulators[i].setVoices(10);
         granulators[i].setGrainParameters(grainSize, 50, 0, 0, grainStart);
     }
     
