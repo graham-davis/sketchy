@@ -2,25 +2,106 @@
 
 //--------------------------------------------------------------
 void ofApp::setup(){
-    // Initialize audio variables
+    
+// AUDIO VARIABLES
+    
     soundStream.setup(this, MY_CHANNELS, MY_CHANNELS, MY_SRATE, MY_BUFFERSIZE, MY_NBUFFERS);
     audioReady = false;
     numTextures = 5;
     
-    // Initialize top nav variables
+    // Smoothers and gain
+    onOff.resize(numTextures);
+    for (int i=0; i<numTextures; i++) {
+        onOff[i].setSmooth(.8);
+    }
+    redrawSmooth.setSmooth(.75);
+    redrawGain = 0;
+    
+    // Reverb
+    reverb.setEffectMix(0.3);
+    reverb.setRoomSize(0.6);
+    
+    // Pitch shift
+    shift.clear();
+    shift.setShift(1.0);
+    
+// WINDOW VARIABLES
+    
+    ww = 0.0;
+    wh = 0.0;
+    mouseX = 0.0;
+    mouseY = 0.0;
+    mouseVel = 0.0;
+    gutterWidth = 16;
+    gutterHeight = 8;
+    
+// COLORS
+    
+    colors.resize(numTextures);
+    colors[0]   = ofColor(242, 95, 92);
+    colors[1]   = ofColor(255, 224, 102);
+    colors[2]   = ofColor(36, 123, 160);
+    colors[3]   = ofColor(112, 193, 179);
+    colors[4]   = ofColor(80, 81, 79);
+    offWhite    = ofColor(240, 240, 240);
+    lightGrey   = ofColor(220, 220, 220);
+    mediumGrey  = ofColor(190, 190, 190);
+    darkGrey    = ofColor(160, 160, 160);
+    
+// FONT
+    
+    titleFont.load("denne.ttf", 50);
+    titleFont.setLineHeight(40.0f);
+    titleFont.setLetterSpacing(1.035);
+    
+        
+// TOP NAVIGATION
+    
+    // Load icons for top navigation
     tileIcon.load(ofToDataPath("tileSketch.png", true));
     settingsIcon.load(ofToDataPath("settingsSketch.png", true));
     stickersIcon.load(ofToDataPath("stickerSketch.png", true));
     undoIcon.load(ofToDataPath("undoSketch.png", true));
     trashIcon.load(ofToDataPath("trashSketch.png", true));
-    tileIconHeight = 50;
     
-    // Initialize sticker variables
-    stickerIconSize = 75;
-    stickerBoxHeight = 100;
-    stickerSelectors.resize(5);
+    // Size variables for top navigation
+    topNavHeight    = 100;
+    topNavIconHeight  = 50;
+    
+    // Top navigation interaction booleans
+    drawGrid = false;
+    trashing = false;
+    undoing = false;
+    drawSettings = true;
+    drawStickerMenu = false;
+    
+// TOOLBOX
+    
+    // Size variables for toolbox
+    toolboxHeight   = 220;
+    toolboxWidth    = ww-(gutterWidth*8);
+    toolboxStart    = 4 * gutterWidth;
+    
+    // Slider variables
+    sliding = false;
+    sliderHeight    = 4;
+    sliderPosition  = 0.5;
+    sliderStart     = gutterWidth*4;
+    
+    // Texture box variables
+    textureBoxes.resize(numTextures);
+    textureBoxWidth = (toolboxWidth/2)/numTextures - (gutterWidth);
+    selectedTexture = -1;
+    
+// STICKERS
+    
     canvasStickers.resize(30);
-    stickersAdded = 0;
+    stickerIconSize     = 75.0;
+    stickerBoxHeight    = 100.0;
+    stickersAdded       = 0;
+    
+    // Sticker menu
+    stickerSelectors.resize(5);
     for (int i=0; i<5; i++) {
         Sticker sticker;
         sticker.setSize(stickerIconSize);
@@ -28,153 +109,79 @@ void ofApp::setup(){
         stickerSelectors[i] = sticker;
     }
     
-    // Initialize stroke variables
-    maxStrokes = 100;
-    maxPixelsPerStroke = 1000;
+// BRUSH
+    
+    minBrushRadius  = 5.0;
+    maxBrushRadius  = 70.0;
+    brushRadius     = 20.0;
+    opacity         = 1.0;
+    
+    
+// STROKES AND DRAWING
+
+    maxStrokes           = 100;
+    maxPixelsPerStroke   = 1000;
     maxStickersPerStroke = 20;
-    currentStroke = 0;
-    currentStrokePixel = 0;
-    maxStrokeLength = 0;
-    redrawPixel = 0;
+    currentStroke        = 0;
     strokes.resize(maxStrokes);
     for (int i=0; i<maxStrokes; i++) {
-        strokes[i].redrawing = false;
-        strokes[i].pixels.resize(maxPixelsPerStroke);
-        strokes[i].stickers.resize(maxStickersPerStroke);
-        strokes[i].playbackPixel = 0;
+        resetStroke(i);
     }
     
-    // Initialize program colors
-    colors.resize(numTextures);
-    colors[0] = ofColor(242, 95, 92);
-    colors[1] = ofColor(255, 224, 102);
-    colors[2] = ofColor(36, 123, 160);
-    colors[3] = ofColor(112, 193, 179);
-    colors[4] = ofColor(80, 81, 79);
-    offWhite = ofColor(240, 240, 240);
-    lightGrey = ofColor(220, 220, 220);
-    mediumGrey = ofColor(190, 190, 190);
-    darkGrey = ofColor(160, 160, 160);
+    // Dissolve strokes
+    strokesToDissolve = 0;
     
-    mouseX = 0;
-    mouseY = 0;
-    mouseVel = 0;
-    useVelocity = false;
+    // Drawing variables
+    redraw      = false;
+    clickCheck  = true;
+    drawing     = false;
+    
+// KEYBOARD
+    
     shiftKey = false;
     
-    // Initialize GUI variables
-    ww = 0;
-    wh = 0;
-    bufferWidth = 16;
-    bufferHeight = 8;
     
-    topNavHeight = 100;
+// READ AUDIO FILES
     
-    toolboxHeight = 220;
-    toolboxStart = 4 * bufferWidth;
-    toolboxWidth = ww-(bufferWidth*8);
-    textureBoxWidth = (toolboxWidth/2)/numTextures - (bufferWidth);
-    sliderHeight = 4;
-    sliderPosition = 0.5;
-    sliding = false;
-    sliderStart = bufferWidth*4;
-    selectedTexture = -1;
-    
-    drawGrid = false;
-    drawSettings = true;
-    drawStickerMenu = false;
-    trashing = false;
-    undoing = false;
-    
-    textureBoxes.resize(numTextures);
-    
-    // Dissolve variables
-    dissolvingPixels = false;
-    pixelsToDissolve = 0;
-    
-    // Initialize font
-    verdana.load("denne.ttf", 50);
-    verdana.setLineHeight(40.0f);
-    verdana.setLetterSpacing(1.035);
-    
-    // Initialize brush variables
-    minBrushRadius = 5;
-    maxBrushRadius = 70;
-    brushRadius = 20;
-    opacity = 1;
-    
-    // Initialize drawing variables
-    redraw = false;
-    canDraw = false;
-    clickCheck = true;
-    drawing = false;
-    mouseDown = false;
-    maxDrawnElements = 10000;
-    elementsDrawn = 0;
-    pixels.resize(10000);
-    
-    // Initialize smoothing parameters
-    onOff.resize(numTextures);
-    for (int i=0; i<numTextures; i++) {
-        onOff[i].setSmooth(.8);
-    }
-    redrawSmooth.setSmooth(.8);
-    redrawGain = 0;
-    
-    // Initialize reverb
-    reverb.setEffectMix(0.3);
-    reverb.setRoomSize(0.6);
-    
-    // Initialize pitch shift
-    shift.clear();
-    shift.setShift(1.0);
-    
-    // Read audio files into buffers
     readFiles();
     
+    
+// SET FRAME RATE
     ofSetFrameRate(120);
 }
 
 //--------------------------------------------------------------
 void ofApp::update(){
+    // Get window variables
     ww = ofGetWindowWidth();
     wh = ofGetWindowHeight();
     
+    // Compute mouse velocity
     mouseVel = sqrt(pow((ofGetMouseX() - mouseX), 2) + pow((ofGetMouseY() - mouseY), 2));
     if (mouseVel < minBrushRadius) mouseVel = minBrushRadius;
     if (mouseVel > maxBrushRadius) mouseVel = maxBrushRadius;
+    
+    // Update mouse position variables
     mouseX = ofGetMouseX();
     mouseY = ofGetMouseY();
+
+    // Update brush size
+    brushRadius = minBrushRadius + (sliderPosition * maxBrushRadius);
     
-    if (useVelocity) {
-        opacity = mouseVel / maxBrushRadius;
-        brushRadius = mouseVel;
-    } else {
-        brushRadius = minBrushRadius + (sliderPosition * maxBrushRadius);
-    }
-    
+    // Update variables size elements
     toolboxHeight = wh * .2;
     stickerIconSize = stickerBoxHeight * 0.75;
     sliderWidth = (toolbox.getWidth()/2) - (sliderStart * 2);
-    
-    
-    // Handle whether we can draw based on mouse location
-    if (sliding || redraw || placingSticker || (drawSettings && toolbox.inside(mouseX, mouseY)) || mouseY <= topNavHeight || (drawStickerMenu && stickerBox.inside(mouseX, mouseY)) || !clickCheck) {
-        canDraw = false;
-    } else {
-        canDraw = true;
-    }
     
     // If placing sticker, update brush sticker position
     if (placingSticker && !redraw) {
         brushSticker.setPosition((mouseX - (stickerIconSize/2))/ww, (mouseY - (stickerIconSize/2))/wh);
     }
     
-    // If drawing is allowed and mouse is down, add pixel
-    if (selectedTexture != -1 && canDraw && mouseDown && elementsDrawn < maxDrawnElements && !dissolvingPixels) {
-        drawing = true;
+    // Add new pixel if currently drawing and not dissolving or redrawing previous strokes
+    if (drawing && !strokesToDissolve && !redraw) {
         
-        // Build new Pixel
+        // Create new Pixel
         Pixel newPixel;
         newPixel.setPosition(ofVec3f(mouseX/ww, mouseY/wh, 0));
         newPixel.setVelocity(0, 0, 0);
@@ -183,59 +190,71 @@ void ofApp::update(){
         newPixel.setOpacity(opacity);
         newPixel.setType(selectedTexture);
         
-        // Add pixel to list of drawn elements
-        pixels[elementsDrawn] = newPixel;
-        elementsDrawn++;
-        
-        // Update current Stroke
-        strokes[currentStroke%maxStrokes].pixels[currentStrokePixel%maxPixelsPerStroke] = newPixel;
+        // Add new pixel to current stroke
+        strokes[currentStroke%maxStrokes].pixels[strokes[currentStroke%maxStrokes].length%maxPixelsPerStroke] = newPixel;
         strokes[currentStroke%maxStrokes].length++;
-        currentStrokePixel++;
     }
 }
 
-//----------------Graphics Methods------------------------------
+//----------------------Drawing Methods-------------------------
 void ofApp::draw(){
+    // Set background gradient
     ofBackgroundGradient(offWhite, lightGrey);
+    
+    // If grid mode is selected, draw grid
     if (drawGrid) drawFullGrid();
+    
+    // Redraw pixels if currently redrawing, otherwise draw all pixels
     if (redraw) {
         redrawPixels();
     } else {
         drawPixels();
     }
+    
     // Only draw brush if texture is selected, pixels are not dissolving, and sticker isn't being placed
     if (placingSticker) {
         brushSticker.draw(ww, wh);
-    } else if (selectedTexture != -1 && canDraw && !dissolvingPixels) {
+    } else if (selectedTexture != -1  && !redraw && !strokesToDissolve) {
         ofSetColor(colors[selectedTexture], 256*opacity);
         ofDrawCircle(mouseX, mouseY, brushRadius);
     }
     
     drawStickers();
+    
+    // Draw top navigation
     drawTopNav();
+    
     if (drawSettings) drawToolbox();
     if (drawStickerMenu) drawStickerbox();
 }
 
+// This function draws all currently placed stickers onto the canvas
 void ofApp::drawStickers() {
-    int i = 0;
-    while (i < stickersAdded) {
-        if (canvasStickers[i].isPopped()) {
-            canvasStickers[i] = canvasStickers[stickersAdded];
-            stickersAdded--;
-        } else {
-            canvasStickers[i].draw(ww, wh);
-            i++;
+    for (int index = 0; index < currentStroke+1; index++) {
+        int j = 0;
+        while (j < strokes[index].numStickers) {
+            if (strokes[index].stickers[j].isPopped()) {
+                strokes[index].stickers[j] = strokes[index].stickers[strokes[index].numStickers];
+                strokes[index].numStickers--;
+            } else {
+                strokes[index].stickers[j].draw(ww, wh);
+                j++;
+            }
         }
+
     }
 }
 
+// This function handles the redrawing of strokes while in redraw mode
 void ofApp::redrawPixels() {
     bool strokesToRedraw = false;
+    
     for (int i=0; i<currentStroke; i++) {
         stroke currStroke = strokes[i];
+
         if (!currStroke.redrawFinished) {
             strokesToRedraw = true;
+            
             if (!currStroke.redrawing && !redrawingTexture[currStroke.textureType]) {
                 strokes[i].redrawing = true;
                 redrawingTexture[currStroke.textureType] = true;
@@ -266,45 +285,67 @@ void ofApp::redrawPixels() {
     }
 }
 
+// Draw a full stroke
 void ofApp::drawStroke(int index) {
     for (int j = 0; j < strokes[index].length; j++) {
         strokes[index].pixels[j].draw(ww, wh);
     }
 }
 
+// Draw all strokes if we are not in redraw mode
 void ofApp::drawPixels() {
     int i = 0;
-    while (i < elementsDrawn) {
-        ofVec3f pixelPos = pixels[i].getPosition();
-        float pixelRad = pixels[i].getRadius();
-        if (pixelPos[0] < 0 || pixelPos[0] >  1 || pixelPos[1] < 0 || pixelPos[1] > 1 || pixelRad < 0.5) {
-            pixels[i] = pixels[elementsDrawn];
-            pixelsToDissolve--;
-            elementsDrawn--;
-            if (pixelsToDissolve == 0 && dissolvingPixels) {
-                dissolvingPixels = false;
-            }
+    while (i < currentStroke + 1) {
+        if (strokes[i].dissolving && strokes[i].pixels[0].getRadius() < 0.5) {
+            strokesToDissolve--;
+            strokes[i] = strokes[currentStroke];
+            resetStroke(currentStroke);
+            currentStroke--;
         } else {
-            pixels[i].draw(ww, wh);
-            checkNearbyStickers(&pixels[i]);
+            drawStroke(i);
             i++;
         }
     }
 }
 
-// This function checks a pixel's nearby stickers, and influences the pixel accordingly
-
-void ofApp::checkNearbyStickers(Pixel *pixel) {
-    ofVec3f pixelPos = pixel->getPosition();
-    for (int i=0; i<stickersAdded; i++) {
-        int stickerType = canvasStickers[i].getType();
-        ofVec2f stickerPos = canvasStickers[i].getPosition();
-        float xDist = pixelPos[0]-stickerPos[0];
-        float yDist = pixelPos[1]-stickerPos[1];
-        float distance = sqrt((xDist*xDist)+(yDist*yDist));
+// Reset all variables associated with a single stroke
+void ofApp::resetStroke(int index) {
+    // Reset pixels
+    strokes[index].pixels.clear();
+    strokes[index].pixels.resize(maxPixelsPerStroke);
+    strokes[index].length = 0;
+    
+    // Reset Stickers
+    strokes[index].stickers.clear();
+    strokes[index].stickers.resize(maxStickersPerStroke);
+    strokes[index].numStickers = 0;
+    
+    strokes[index].dissolving = false;
+    for (int i = 0; i < 5; i++) {
+        strokes[index].macros[i] = 0;
     }
 }
 
+// Begin process of removing a single stroke from the canvas
+void ofApp::clearSingleStroke(int index) {
+    strokes[index].dissolving = true;
+    strokesToDissolve++;
+    for (int i = 0; i < strokes[index].length; i++) {
+        strokes[index].pixels[i].dissolve();
+    }
+    for (int j = 0; j < strokes[index].numStickers; j++) {
+        strokes[index].stickers[j].pop();
+    }
+}
+
+// Begin process of removing all strokes from the canvas
+void ofApp::clearStrokes(){
+    for (int i=0; i<currentStroke; i++) {
+        clearSingleStroke(i);
+    }
+}
+
+// Draws canvas grid
 void ofApp::drawFullGrid() {
     ofSetColor(100, 100, 100, 80);
     for(int i=0; i<20; i++) {
@@ -316,14 +357,15 @@ void ofApp::drawFullGrid() {
     }
 }
 
+// Draw top navigation menu
 void ofApp::drawTopNav() {
     ofSetColor(offWhite);
     topNav.set(0, 0, ww, topNavHeight);
-    trashGhost.set(ww-tileIconHeight-bufferWidth*2, (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
-    undoGhost.set(ww-(tileIconHeight*2)-(bufferWidth*4), (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
-    tileGhost.set(ww-(tileIconHeight*3)-(bufferWidth*8), (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
-    settingsGhost.set(ww-(tileIconHeight*4)-(bufferWidth*10), (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
-    stickersGhost.set(ww-(tileIconHeight*5)-(bufferWidth*12), (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
+    trashGhost.set(ww-topNavIconHeight-gutterWidth*2, (topNavHeight/2)-(topNavIconHeight/2), topNavIconHeight, topNavIconHeight);
+    undoGhost.set(ww-(topNavIconHeight*2)-(gutterWidth*4), (topNavHeight/2)-(topNavIconHeight/2), topNavIconHeight, topNavIconHeight);
+    tileGhost.set(ww-(topNavIconHeight*3)-(gutterWidth*8), (topNavHeight/2)-(topNavIconHeight/2), topNavIconHeight, topNavIconHeight);
+    settingsGhost.set(ww-(topNavIconHeight*4)-(gutterWidth*10), (topNavHeight/2)-(topNavIconHeight/2), topNavIconHeight, topNavIconHeight);
+    stickersGhost.set(ww-(topNavIconHeight*5)-(gutterWidth*12), (topNavHeight/2)-(topNavIconHeight/2), topNavIconHeight, topNavIconHeight);
 
     ofDrawRectangle(topNav);
     
@@ -336,11 +378,11 @@ void ofApp::drawTopNav() {
     
     // Draw app name
     ofSetColor(colors[0]);
-    verdana.drawString("Sketchy", bufferWidth*2, (topNavHeight/2)+20);
+    titleFont.drawString("Sketchy", gutterWidth*2, (topNavHeight/2)+20);
     
     // Trash icon
     if (!trashing) ofSetColor(mediumGrey);
-    trashIcon.draw(ww-tileIconHeight-bufferWidth*2, (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
+    trashIcon.draw(ww-topNavIconHeight-gutterWidth*2, (topNavHeight/2)-(topNavIconHeight/2), topNavIconHeight, topNavIconHeight);
     
     // Undo icon
     if (!undoing) {
@@ -348,12 +390,12 @@ void ofApp::drawTopNav() {
     } else {
         ofSetColor(colors[0]);
     }
-    undoIcon.draw(ww-(tileIconHeight*2)-(bufferWidth*4), (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
+    undoIcon.draw(ww-(topNavIconHeight*2)-(gutterWidth*4), (topNavHeight/2)-(topNavIconHeight/2), topNavIconHeight, topNavIconHeight);
     
     // Dividing Line
     ofSetColor(mediumGrey);
     ofSetLineWidth(3);
-    ofDrawLine(ww-(tileIconHeight*2)-(bufferWidth*6), bufferHeight*2, ww-(tileIconHeight*2)-(bufferWidth*6), topNavHeight-(bufferHeight*2));
+    ofDrawLine(ww-(topNavIconHeight*2)-(gutterWidth*6), gutterHeight*2, ww-(topNavIconHeight*2)-(gutterWidth*6), topNavHeight-(gutterHeight*2));
     ofSetLineWidth(1);
     
     // Draw grid icon
@@ -363,7 +405,7 @@ void ofApp::drawTopNav() {
         ofSetColor(colors[0]);
     }
     
-    tileIcon.draw(ww-(tileIconHeight*3)-(bufferWidth*8), (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
+    tileIcon.draw(ww-(topNavIconHeight*3)-(gutterWidth*8), (topNavHeight/2)-(topNavIconHeight/2), topNavIconHeight, topNavIconHeight);
     
     // Draw settings icon
     if (!drawSettings) {
@@ -371,7 +413,7 @@ void ofApp::drawTopNav() {
     } else {
         ofSetColor(colors[0]);
     }
-    settingsIcon.draw(ww-(tileIconHeight*4)-(bufferWidth*10), (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
+    settingsIcon.draw(ww-(topNavIconHeight*4)-(gutterWidth*10), (topNavHeight/2)-(topNavIconHeight/2), topNavIconHeight, topNavIconHeight);
     
     //Draw stickers icon
     if (!drawStickerMenu) {
@@ -379,17 +421,18 @@ void ofApp::drawTopNav() {
     } else {
         ofSetColor(colors[0]);
     }
-    stickersIcon.draw(ww-(tileIconHeight*5)-(bufferWidth*12), (topNavHeight/2)-(tileIconHeight/2), tileIconHeight, tileIconHeight);
+    stickersIcon.draw(ww-(topNavIconHeight*5)-(gutterWidth*12), (topNavHeight/2)-(topNavIconHeight/2), topNavIconHeight, topNavIconHeight);
 }
 
+// Draw stroke settings toolbox
 void ofApp::drawToolbox() {
     ofSetColor(offWhite, 190);
-    toolboxWidth = ww-(bufferWidth*8);
+    toolboxWidth = ww-(gutterWidth*8);
     toolbox.set(toolboxStart, wh-toolboxHeight, toolboxWidth, toolboxHeight);
     ofDrawRectangle(toolbox);
     
     ofPoint toolboxCenter = toolbox.getCenter();
-    textureBoxWidth = (toolboxWidth/(2*numTextures)) - (2*bufferWidth);
+    textureBoxWidth = (toolboxWidth/(2*numTextures)) - (2*gutterWidth);
 
     for(int i=0; i<numTextures; i++) {
         if (selectedTexture == i) {
@@ -397,12 +440,13 @@ void ofApp::drawToolbox() {
         } else {
             ofSetColor(colors[i], 140);
         }
-        textureBoxes[i].set(toolboxCenter[0]+(textureBoxWidth*i)+(bufferWidth*(i+4)), wh-(toolboxHeight-2*bufferHeight), textureBoxWidth, toolboxHeight-(4*bufferHeight));
+        textureBoxes[i].set(toolboxCenter[0]+(textureBoxWidth*i)+(gutterWidth*(i+4)), wh-(toolboxHeight-2*gutterHeight), textureBoxWidth, toolboxHeight-(4*gutterHeight));
         ofDrawRectangle(textureBoxes[i]);
     }
     drawSizeSlider();
 }
 
+// Draw slider within toolbox
 void ofApp::drawSizeSlider() {
     ofSetColor(lightGrey);
     ofDrawRectRounded(sliderStart + toolboxStart, wh - (toolboxHeight / 2) - (sliderHeight/2), sliderWidth, sliderHeight, 10);
@@ -416,16 +460,16 @@ void ofApp::drawSizeSlider() {
     ofDrawRectRounded(sliderCircle, (brushRadius));
 }
 
-
+// Draw sticker select menu
 void ofApp::drawStickerbox() {
     ofSetColor(offWhite, 0);
-    stickerBox.set(toolboxStart, topNavHeight, (bufferWidth * 2) + stickerIconSize, wh*0.6);
+    stickerBox.set(toolboxStart, topNavHeight, (gutterWidth * 2) + stickerIconSize, wh*0.6);
     ofDrawRectangle(stickerBox);
     
     for (int i = 0; i < 5; i++) {
         stickerSelectors[i].setSize(stickerIconSize);
-        float stickerX = (toolboxStart + bufferWidth)/ww;
-        float stickerY = (topNavHeight + stickerIconSize*i + bufferHeight*2*(i+1))/wh;
+        float stickerX = (toolboxStart + gutterWidth)/ww;
+        float stickerY = (topNavHeight + stickerIconSize*i + gutterHeight*2*(i+1))/wh;
         stickerSelectors[i].setPosition(stickerX, stickerY);
         stickerSelectors[i].draw(ww, wh);
     }
@@ -450,66 +494,18 @@ void ofApp::keyPressed(int key){
             redrawGain = 0;
             reverb.clear();
         }
-        redrawPixel = 0;
         redrawLock.unlock();
-    } else if (key==127 && !redraw && !dissolvingPixels) {
+    } else if (key==127 && !redraw && !strokesToDissolve) {
         if (currentStroke != 0) {
             if (shiftKey) {
                 clearStrokes();
             } else {
-                clearSingleStroke();
+                clearSingleStroke(currentStroke-1);
             }
         }
-        if (stickersAdded != 0) {
-            clearStickers();
-        }
     }
 }
 
-void ofApp::clearSingleStroke() {
-    stroke newest = strokes[currentStroke-1];
-    for (int i = 0; i < newest.length; i++) {
-        pixels[elementsDrawn-1-i].dissolve();
-        pixels[elementsDrawn-1-i].setVelocity(ofRandom(-.05, .05), ofRandom(-.05, .05), ofRandom(-5, 5));
-        pixelsToDissolve = newest.length;
-        dissolvingPixels = true;
-    }
-    currentStroke--;
-    strokes[currentStroke].pixels.clear();
-    strokes[currentStroke].pixels.resize(500);
-    strokes[currentStroke].length = 0;
-    currentStrokePixel = 0;
-    maxStrokeLength = 0;
-    for (int j = 0; j < currentStroke; j++) {
-        if (strokes[j].length > maxStrokeLength) maxStrokeLength = strokes[j].length;
-    }
-}
-
-void ofApp::clearStrokes(){
-    for(int i = 0; i < elementsDrawn; i++) {
-        pixels[i].dissolve();
-        pixels[i].setVelocity(ofRandom(-.05, .05), ofRandom(-.05, .05), ofRandom(-5, 5));
-        pixelsToDissolve = elementsDrawn;
-        dissolvingPixels = true;
-    }
-    for (int i=0; i<currentStroke; i++) {
-        strokes[i].pixels.clear();
-        strokes[i].pixels.resize(500);
-        strokes[i].length = 0;
-        for (int j = 0; j < 5; j++) {
-            strokes[i].macros[j] = 0;
-        }
-    }
-    maxStrokeLength = 0;
-    currentStroke = 0;
-    currentStrokePixel = 0;
-}
-
-void ofApp::clearStickers() {
-    for (int i = 0; i < stickersAdded; i++) {
-        canvasStickers[i].pop();
-    }
-}
 
 //--------------------------------------------------------------
 void ofApp::keyReleased(int key){
@@ -538,22 +534,27 @@ void ofApp::mouseDragged(int x, int y, int button){
 
 //--------------------------------------------------------------
 void ofApp::mousePressed(int x, int y, int button){
-    mouseDown = true;
     if (drawSettings) {
         for (int i=0; i<numTextures; i++) {
             if (textureBoxes[i].inside(x, y)) {
                 selectedTexture = (selectedTexture == i) ? -1 : i;
             }
         }
+        
     }
     
     if (drawStickerMenu) {
         for (int i=0; i<5; i++) {
             if (stickerSelectors[i].inside(x,y)) {
                 placingSticker = true;
+                clickCheck = false;
                 brushSticker = stickerSelectors[i];
             }
         }
+    }
+    
+    if (topNav.inside(x, y) || toolbox.inside(x, y)) {
+        clickCheck = false;
     }
     
     if (tileGhost.inside(x, y)) {
@@ -562,31 +563,30 @@ void ofApp::mousePressed(int x, int y, int button){
         drawSettings = !drawSettings;
     } else if (stickersGhost.inside(x, y)) {
         drawStickerMenu = !drawStickerMenu;
-    } else if (canDraw && selectedTexture != -1) {
-        strokes[currentStroke].textureType = selectedTexture;
-        playTexture[selectedTexture] = 1;
     } else if (sliderCircle.inside(x, y)) {
+        clickCheck = false;
         sliding = true;
-    } else if (undoGhost.inside(x, y) && !redraw && currentStroke != 0 && !dissolvingPixels) {
+    } else if (undoGhost.inside(x, y) && !redraw && currentStroke != 0 && !strokesToDissolve) {
         undoing = true;
-        clearSingleStroke();
-    } else if (trashGhost.inside(x, y) && !redraw && currentStroke != 0 && !dissolvingPixels) {
+        clearSingleStroke(currentStroke-1);
+    } else if (trashGhost.inside(x, y) && !redraw && currentStroke != 0 && !strokesToDissolve) {
         trashing = true;
         clearStrokes();
-    } else if (topNav.inside(x, y) || toolbox.inside(x, y)) {
-        clickCheck = false;
+    }
+    
+    if (selectedTexture != -1 && clickCheck) {
+        drawing = true;
+        strokes[currentStroke].textureType = selectedTexture;
+        playTexture[selectedTexture] = 1;
     }
 }
 
 //--------------------------------------------------------------
 void ofApp::mouseReleased(int x, int y, int button){
-    mouseDown = false;
     clickCheck = true;
     if (drawing) {
         if (selectedTexture != -1) playTexture[selectedTexture] = 0;
         currentStroke++;
-        if (currentStrokePixel > maxStrokeLength) maxStrokeLength = currentStrokePixel;
-        currentStrokePixel = 0;
         drawing = false;
     } else if (sliding) {
         sliding = false;
@@ -594,12 +594,12 @@ void ofApp::mouseReleased(int x, int y, int button){
         if (!stickerBox.inside(x, y) && !topNav.inside(x, y) && (!toolbox.inside(x, y) || !drawSettings)) {
             Sticker newSticker;
             newSticker = brushSticker;
-            canvasStickers[stickersAdded] = newSticker;
-            stickersAdded++;
             
-            if (currentStroke > 0) {
-                strokes[currentStroke].macros[newSticker.getType()]++;
-            }
+            // Add sticker to current stroke
+            int addStrokeTo = (currentStroke > 0) ? currentStroke - 1 : currentStroke;
+            strokes[addStrokeTo].stickers[strokes[addStrokeTo].numStickers] = newSticker;
+            strokes[addStrokeTo].numStickers++;
+            strokes[addStrokeTo].macros[newSticker.getType()]++;
         }
         placingSticker = false;
     } else if (trashing || undoing) {
@@ -643,7 +643,6 @@ void ofApp::audioOut(float * output, int bufferSize, int nChannels){
         } else if (redrawGain > 0) {
             redrawGain = 0;
             redrawLock.lock();
-            redrawPixel = 0;
             redrawLock.unlock();
             reverb.clear();
             shift.clear();

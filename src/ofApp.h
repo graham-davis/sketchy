@@ -40,7 +40,7 @@ public:
     void audioOut(float * input, int bufferSize, int nChannels);
     
 private:
-    // Private member functions
+// PRIVATE MEMBER FUNCTIONS
     void drawAudio(float *input, int bufferSize, int j, float gain);
     void redrawAudio(float *input, int bufferSize);
     void readFiles();
@@ -50,138 +50,17 @@ private:
     void drawPixels();
     void redrawPixels();
     void drawStroke(int index);
+    void resetStroke(int index);
     void drawSizeSlider();
     void drawStickerbox();
     void drawStickers();
     void checkNearbyStickers(Pixel *pixel);
     void clearStrokes();
-    void clearSingleStroke();
-    void clearStickers();
+    void clearSingleStroke(int index);
     
-    // Audio Variables
+// AUDIO VARIABLES
     bool audioReady;
     ofSoundStream soundStream;
-    
-    // Keyboard / Mouse Variables
-    float mouseX;
-    float mouseY;
-    float mouseVel;
-    bool useVelocity;
-    bool shiftKey;
-    
-    // Texture variables
-    int numTextures;
-    vector<float> playTexture;
-    
-    // GUI/Color Variables
-    vector<ofColor> colors;
-    ofColor offWhite;
-    ofColor lightGrey;
-    ofColor mediumGrey;
-    ofColor darkGrey;
-    
-    ofRectangle topNav;
-    ofRectangle toolbox;
-    ofRectangle stickerBox;
-    vector<ofRectangle> textureBoxes;
-    int selectedTexture;
-    
-    // Brush variables
-    ofPath brush;
-    float brushRadius;
-    float minBrushRadius;
-    float maxBrushRadius;
-    float opacity;
-    
-    float ww;
-    float wh;
-    float bufferWidth;
-    float bufferHeight;
-    
-    // Top nav variables
-    float topNavHeight;
-    ofImage tileIcon;
-    ofImage settingsIcon;
-    ofImage stickersIcon;
-    ofImage undoIcon;
-    ofImage trashIcon;
-    float tileIconHeight;
-    bool drawGrid;
-    bool drawSettings;
-    bool drawStickerMenu;
-    bool trashing;
-    bool undoing;
-    
-    ofRectangle tileGhost;
-    ofRectangle settingsGhost;
-    ofRectangle stickersGhost;
-    ofRectangle undoGhost;
-    ofRectangle trashGhost;
-    
-    // Toolbox variables
-    float toolboxHeight;
-    float toolboxStart;
-    float toolboxWidth;
-    float textureBoxWidth;
-    
-    // Slider Variables
-    float sliderHeight;
-    float sliderPosition;
-    float sliderWidth;
-    float sliderStart;
-    ofRectangle sliderCircle;
-    bool sliding;
-    
-    // Font variables
-    ofTrueTypeFont verdana;
-    
-    // Drawing variables
-    int redraw;
-    
-    bool canDraw;
-    bool clickCheck;
-    bool drawing;
-    bool mouseDown;
-    int maxDrawnElements;
-    int elementsDrawn;
-    int pixelsToDissolve;
-    bool dissolvingPixels;
-    vector<Pixel> pixels;
-    
-    // Sticker variables
-    bool placingSticker;
-    Sticker brushSticker;
-    float stickerBoxHeight;
-    float stickerIconSize;
-    int stickersAdded;
-    
-    vector<Sticker> stickerSelectors;
-    vector<Sticker> canvasStickers;
-    
-    // Stroke variables
-    struct stroke {
-        int length;
-        int numStickers;
-        vector<Pixel> pixels;
-        vector<Sticker> stickers;
-        bool redrawing;
-        bool redrawFinished;
-        int playbackPixel;
-        int textureType;
-        
-        // Sticker variables
-        int macros[5];
-    };
-    vector<bool> redrawingTexture;
-    int maxStrokes;
-    int maxPixelsPerStroke;
-    int maxStickersPerStroke;
-    int currentStroke;
-    int currentStrokePixel;
-    int maxStrokeLength;
-    int redrawPixel;
-    
-    vector<stroke> strokes;
     
     // Granular variables
     vector<stk::Granulate> granulators;
@@ -196,10 +75,138 @@ private:
     stk::PitShift shift;
     
     // Smoothers
-    vector<Smooth> onOff;    
+    vector<Smooth> onOff;
     Smooth redrawSmooth;
     float redrawGain;
     
-    // Mutex
+// WINDOW VARIABLES
+    float ww;
+    float wh;
+    float gutterWidth;
+    float gutterHeight;
+    float mouseX;
+    float mouseY;
+    float mouseVel;
+    
+// COLORS
+    vector<ofColor> colors;
+    ofColor offWhite;
+    ofColor lightGrey;
+    ofColor mediumGrey;
+    ofColor darkGrey;
+    
+// FONT
+    
+    ofTrueTypeFont titleFont;
+    
+// TOP NAVIGATION
+    ofRectangle topNav;
+    float topNavHeight;
+    
+    // Icons
+    float topNavIconHeight;
+    
+    ofImage tileIcon;
+    ofImage settingsIcon;
+    ofImage stickersIcon;
+    ofImage undoIcon;
+    ofImage trashIcon;
+    
+    // Clickable icon ghosts
+    ofRectangle tileGhost;
+    ofRectangle settingsGhost;
+    ofRectangle stickersGhost;
+    ofRectangle undoGhost;
+    ofRectangle trashGhost;
+    
+    // Interaction booleans
+    bool drawGrid;
+    bool drawSettings;
+    bool drawStickerMenu;
+    bool trashing;
+    bool undoing;
+
+// TOOLBOX
+    
+    ofRectangle toolbox;
+    float toolboxHeight;
+    float toolboxStart;
+    float toolboxWidth;
+    
+    // Texture boxes
+    int numTextures;
+    int selectedTexture;
+    vector<ofRectangle> textureBoxes;
+    vector<float> playTexture;
+    float textureBoxWidth;
+    
+    // Slider
+    float sliderHeight;
+    float sliderPosition;
+    float sliderWidth;
+    float sliderStart;
+    ofRectangle sliderCircle;
+    bool sliding;
+    
+// STICKERS
+    vector<Sticker> stickerSelectors;
+    vector<Sticker> canvasStickers;
+    ofRectangle stickerBox;
+    bool placingSticker;
+    Sticker brushSticker;
+    float stickerBoxHeight;
+    float stickerIconSize;
+    int stickersAdded;
+    
+// BRUSH
+    ofPath brush;
+    float brushRadius;
+    float minBrushRadius;
+    float maxBrushRadius;
+    float opacity;
+    
+// STROKES AND DRAWING
+    
+    int redraw;
+    bool clickCheck;
+    bool drawing;
+    int strokesToDissolve;
+    
+    // Stroke struct
+    struct stroke {
+        int length;
+        vector<Pixel> pixels;
+        int textureType;
+        
+        // Redraw and playback
+        bool redrawing;
+        bool redrawFinished;
+        int playbackPixel;
+
+        // Destruction
+        bool dissolving;
+        
+        // Sticker influence variables
+        int macros[5];
+        
+        // Associated stickers
+        vector<Sticker> stickers;
+        int numStickers;
+    };
+    vector<bool> redrawingTexture;
+    int maxStrokes;
+    int maxPixelsPerStroke;
+    int maxStickersPerStroke;
+    int currentStroke;
+    
+    vector<stroke> strokes;
+    
+    
+// KEYBOARD
+    
+    bool shiftKey;
+ 
+// MUTEX
+    
     mutex redrawLock;
 };
