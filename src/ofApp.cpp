@@ -157,12 +157,13 @@ void ofApp::setup(){
     
     
 // SET FRAME RATE
+    //ofSetFullscreen(true);
     ofSetFrameRate(120);
 }
 
 void ofApp::exit() {
+    saveFile();
     audioReady = false;
-    std::cout << "BYE!!!!"<< std::endl;
 }
 
 //--------------------------------------------------------------
@@ -530,6 +531,10 @@ void ofApp::keyPressed(int key){
                 clearSingleStroke(currentStroke-1);
             }
         }
+    } else if (key == 115) {
+        saveFile();
+    } else if (key == 108) {
+        loadFile();
     }
 }
 
@@ -789,5 +794,62 @@ void ofApp::readFiles(){
     }
     
     audioReady = true;
+}
+
+
+void ofApp::saveFile() {
+    ofFile newSketch;
+    const string filepath = "sketches/lastSketch.txt";
+    newSketch.open(ofToDataPath(filepath), ofFile::ReadWrite, false);
+    
+    ofBuffer sketchBuffer;
+    for (int i = 0; i < currentStroke; i++) {
+        string sketchLine = "";
+        for (int j = 0; j < strokes[i].length; j++) {
+            sketchLine += std::to_string(strokes[i].pixels[j].getType()) + ":";
+            for (int k = 0; k < 3; k++) {
+                sketchLine += std::to_string(strokes[i].pixels[j].getPosition()[k]) + ":";
+            }
+            sketchLine += std::to_string(strokes[i].pixels[j].getRadius()) + ":" + std::to_string(strokes[i].pixels[j].getOpacity());
+            if (j < strokes[i].length-1) sketchLine += ",";
+        }
+        sketchLine += "\n";
+        sketchBuffer.append(sketchLine);
+    }
+    
+    ofBufferToFile(filepath, sketchBuffer);
+}
+
+void ofApp::loadFile() {
+    for (int i = 0; i < currentStroke; i++) {
+        resetStroke(i);
+    }
+    currentStroke = 0;
+    
+    vector<string> fileStrokes;
+    const string filepath = "sketches/lastSketch.txt";
+    ofBuffer buffer = ofBufferFromFile(ofToDataPath(filepath));
+    for (auto line : buffer.getLines()){
+        fileStrokes.push_back(line);
+    }
+    
+    for (int i = 0; i < fileStrokes.size(); i++) {
+        vector<string> strokePixels;
+        strokePixels = ofSplitString(fileStrokes[i], ",");
+        if (strokePixels.size()-1) {
+            for (int j = 0; j < strokePixels.size(); j++) {
+                vector<string> pixelData;
+                pixelData = ofSplitString(strokePixels[j], ":");
+                strokes[i].pixels[j].setType(std::stoi(pixelData[0]));
+                strokes[i].textureType = std::stoi(pixelData[0]);
+                strokes[i].pixels[j].setColor(colors[std::stoi(pixelData[0])]);
+                strokes[i].pixels[j].setPosition(ofVec3f(std::stof(pixelData[1]), std::stof(pixelData[2]), std::stof(pixelData[3])));
+                strokes[i].pixels[j].setSize(std::stof(pixelData[4]));
+                strokes[i].pixels[j].setOpacity(std::stof(pixelData[5]));
+                strokes[i].length++;
+            }
+            currentStroke++;
+        }
+    }
 }
 

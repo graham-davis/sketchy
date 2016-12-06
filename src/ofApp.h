@@ -58,6 +58,8 @@ private:
     void checkNearbyStickers(Pixel *pixel);
     void clearStrokes();
     void clearSingleStroke(int index);
+    void saveFile();
+    void loadFile();
     
 // AUDIO VARIABLES
     bool audioReady;
