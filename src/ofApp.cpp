@@ -12,9 +12,15 @@ void ofApp::setup(){
     // Smoothers and gain
     onOff.resize(numTextures);
     drawGain.resize(numTextures);
+    shifters.resize(numTextures);
+
     for (int i=0; i<numTextures; i++) {
         onOff[i].setSmooth(.75);
         drawGain[i] = 0;
+        // Pitch shift
+        shifters[i].clear();
+        shifters[i].setShift(1.0);
+        shifters[i].setEffectMix(1.0);
     }
     redrawSmooth.setSmooth(.8);
     redrawGain = 0;
@@ -23,9 +29,10 @@ void ofApp::setup(){
     reverb.setEffectMix(0.3);
     reverb.setRoomSize(0.6);
     
-    // Pitch shift
-    shift.clear();
-    shift.setShift(1.0);
+    // Chorus
+    chorus.clear();
+    chorus.setModDepth(0.9);
+    chorus.setModFrequency(400);
     
 // WINDOW VARIABLES
     
@@ -121,11 +128,12 @@ void ofApp::setup(){
     
 // STROKES AND DRAWING
 
-    maxStrokes           = 100;
-    maxPixelsPerStroke   = 1000;
-    maxStickersPerStroke = 20;
+    maxStrokes           = 50;
+    maxPixelsPerStroke   = 500;
+    maxStickersPerStroke = 2;
     currentStroke        = 0;
     strokes.resize(maxStrokes);
+    strokesToRedraw.resize(numTextures);
     for (int i=0; i<maxStrokes; i++) {
         resetStroke(i);
     }
@@ -249,47 +257,51 @@ void ofApp::drawStickers() {
 
 // This function handles the redrawing of strokes while in redraw mode
 void ofApp::redrawPixels() {
-    bool strokesToRedraw = false;
+    bool moreToDraw = false;
     
     for (int i=0; i<currentStroke; i++) {
         stroke currStroke = strokes[i];
 
         if (!currStroke.redrawFinished) {
-            strokesToRedraw = true;
+            moreToDraw = true;
             
             if (!currStroke.redrawing && !redrawingTexture[currStroke.textureType]) {
-                strokes[i].redrawing = 1;
                 redrawingTexture[currStroke.textureType] = true;
+                strokesToRedraw[currStroke.textureType] = i;
+                strokes[i].redrawing = 1;
+                strokes[i].delay = strokes[i].macros[3];
+                strokes[i].stutter = strokes[i].macros[2];
             }
         } else {
             drawStroke(i);
         }
-        if (currStroke.redrawing) {
-            if (currStroke.playbackPixel == currStroke.length) {
-                if (currStroke.macros[4]) {
-                    strokes[i].playbackPixel = 0;
-                    strokes[i].macros[4]--;
-                    strokes[i].repeats++;
-                } else {
-                    strokes[i].macros[4] = strokes[i].repeats;
-                    strokes[i].repeats = 0;
-                    strokes[i].redrawFinished = true;
-                    strokes[i].redrawing = 0;
-                    strokes[i].playbackPixel--;
-                    redrawingTexture[currStroke.textureType] = false;
-                }
+        
+        if (strokes[i].redrawing) {
+            if (currStroke.playbackPixel == currStroke.length*(currStroke.macros[0]+1)) {
+                strokes[i].redrawFinished = true;
+                strokes[i].redrawing = 0;
+                redrawingTexture[currStroke.textureType] = false;
                 drawStroke(i);
             } else {
-                for (int j=0; j<currStroke.playbackPixel; j++) {
-                    currStroke.pixels[j].draw(ww, wh);
+                if (strokes[i].delay > 0) {
+                    strokes[i].delay -= 0.05;
+                } else {
+                    int reverse = (int)currStroke.macros[4]%2;
+                    for (int j=0; j<currStroke.playbackPixel%currStroke.length; j++) {
+                        currStroke.pixels[abs(((currStroke.length-1)*reverse)-j)].draw(ww, wh);
+                    }
+                    redrawLock.lock();
+                    strokes[i].stutter--;
+                    if (strokes[i].stutter < 0) {
+                        strokes[i].playbackPixel++;
+                        strokes[i].stutter = strokes[i].macros[2];
+                    }
+                    redrawLock.unlock();
                 }
-                redrawLock.lock();
-                strokes[i].playbackPixel++;
-                redrawLock.unlock();
             }
         }
     }
-    if (!strokesToRedraw) {
+    if (!moreToDraw) {
         redraw = 0;
     }
 }
@@ -331,7 +343,9 @@ void ofApp::resetStroke(int index) {
     
     strokes[index].env.setSmooth(0.75);
     strokes[index].repeats = 0;
-    
+    strokes[index].delay = 0;
+    strokes[index].stutter = 0;
+        
     strokes[index].dissolving = false;
     for (int i = 0; i < 5; i++) {
         strokes[index].macros[i] = 0;
@@ -496,6 +510,7 @@ void ofApp::keyPressed(int key){
             strokes[i].redrawFinished = false;
             strokes[i].playbackPixel = 0;
             strokes[i].redrawing = 0;
+            redrawingTexture[strokes[i].textureType] = false;
         }
         redrawLock.lock();
         if (!redraw) {
@@ -564,7 +579,7 @@ void ofApp::mousePressed(int x, int y, int button){
         }
     }
     
-    if (topNav.inside(x, y) || toolbox.inside(x, y)) {
+    if (topNav.inside(x, y) || (toolbox.inside(x, y) && drawSettings)) {
         clickCheck = false;
     }
     
@@ -609,9 +624,11 @@ void ofApp::mouseReleased(int x, int y, int button){
             
             // Add sticker to current stroke
             int addStrokeTo = (currentStroke > 0) ? currentStroke - 1 : currentStroke;
-            strokes[addStrokeTo].stickers[strokes[addStrokeTo].numStickers] = newSticker;
-            strokes[addStrokeTo].numStickers++;
-            strokes[addStrokeTo].macros[newSticker.getType()]++;
+            if (strokes[addStrokeTo].numStickers < maxStickersPerStroke) {
+                strokes[addStrokeTo].stickers[strokes[addStrokeTo].numStickers] = newSticker;
+                strokes[addStrokeTo].numStickers++;
+                strokes[addStrokeTo].macros[newSticker.getType()]++;
+            }
         }
         placingSticker = false;
     } else if (trashing || undoing) {
@@ -657,7 +674,6 @@ void ofApp::audioOut(float * output, int bufferSize, int nChannels){
             redrawGain = redrawSmooth.tick(redraw);
         } else if (redrawGain > 0) {
             redrawGain = 0;
-            shift.clear();
         } else {
             for (int j = 0; j < numTextures; j++) {
                 if (drawGain[j] > 0.005) {
@@ -665,7 +681,7 @@ void ofApp::audioOut(float * output, int bufferSize, int nChannels){
                     drawGain[j] = onOff[j].tick(playTexture[j]);
                 } else if (drawGain[j] > 0) {
                     drawGain[j] = 0;
-                    shift.clear();
+                    shifters[j].clear();
                 }
             }
         }
@@ -696,8 +712,8 @@ stk::StkFrames ofApp::drawAudio(int bufferSize, int j, float gain) {
     // Compute audio
     granulators[j].setGrainParameters(grainSize, 75, 0, 0, grainStart);
     granulators[j].tick(outputFrames);
-    shift.setShift(2 * yRatio);
-    shift.tick(outputFrames);
+    shifters[j].setShift(2 * yRatio);
+    shifters[j].tick(outputFrames);
 
     return outputFrames;
 }
@@ -710,33 +726,38 @@ stk::StkFrames ofApp::redrawAudio(int bufferSize) {
     stk::StkFrames outputFrames;
     outputFrames.resize(bufferSize, 2, 0);
     
-    for (int i = 0; i < currentStroke; i++) {
-        redrawLock.lock();
-        float currentGain = strokes[i].env.tick(strokes[i].redrawing);
-        if (strokes[i].redrawing) {
-            Pixel currPixel = strokes[i].pixels[strokes[i].playbackPixel];
-            int pixelType = currPixel.getType();
-            if (pixelType >= 0 && pixelType < 5) {
-                ofVec3f position = currPixel.getPosition();
-                int pixelRadius = currPixel.getRadius();
-                int grainStart = granulators[pixelType].fileSize()*position[0];
-                if (pixelRadius) {
-                    granulators[pixelType].setGrainParameters(pixelRadius*500, 0, 0, 0, grainStart);
-                    granulators[pixelType].tick(outputBuffer);
-                    float yRatio = 1 - (position[1] - (topNavHeight/wh));
-                    if (yRatio > 1) yRatio = 1;
-                    if (yRatio < 0) yRatio = 0;
-                    
-                    shift.setShift(2 * yRatio);
-                    shift.tick(outputBuffer);
-
-                    for (int j = 0; j < bufferSize; j++) {
-                        outputFrames(j, 0) += outputBuffer(j, 0)*currPixel.getOpacity()*currentGain;
+    for (int i = 0; i < numTextures; i++) {
+        if (redrawingTexture[i]) {
+            if (strokes[strokesToRedraw[i]].redrawing && strokes[strokesToRedraw[i]].delay <= 0) {
+                int index = abs((strokes[strokesToRedraw[i]].length*((int)strokes[strokesToRedraw[i]].macros[4]%2))-strokes[strokesToRedraw[i]].playbackPixel%strokes[strokesToRedraw[i]].length);
+                Pixel currPixel = strokes[strokesToRedraw[i]].pixels[index];
+                int pixelType = currPixel.getType();
+                if (pixelType >= 0 && pixelType < 5) {
+                    ofVec3f position = currPixel.getPosition();
+                    int pixelRadius = currPixel.getRadius();
+                    int grainStart = granulators[pixelType].fileSize()*position[0];
+                    if (pixelRadius) {
+                        granulators[pixelType].setGrainParameters(pixelRadius*500, 0, 0, 0, grainStart);
+                        granulators[pixelType].tick(outputBuffer);
+                        float yRatio = 1 - (position[1] - (topNavHeight/wh));
+                        if (yRatio > 1) yRatio = 1;
+                        if (yRatio < 0) yRatio = 0;
+                        
+                        shifters[i].setShift(2 * yRatio);
+                        shifters[i].tick(outputBuffer);
+                        
+                        if (strokes[strokesToRedraw[i]].macros[1] > 0) {
+                            chorus.tick(outputBuffer);
+                        }
+                        
+                        for (int j = 0; j < bufferSize; j++) {
+                            outputFrames(j, 0) += outputBuffer(j, 0)*currPixel.getOpacity();
+                        }
                     }
                 }
+
             }
         }
-        redrawLock.unlock();
     }
     return outputFrames;
 }
@@ -760,7 +781,7 @@ void ofApp::readFiles(){
     for (int i=0; i<numTextures; i++) {
         playTexture[i] = 0;
         redrawingTexture[i] = false;
-        granulators[i].setVoices(10);
+        granulators[i].setVoices(5);
         granulators[i].setGrainParameters(grainSize, 50, 0, 0, grainStart);
     }
     

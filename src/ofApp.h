@@ -71,7 +71,10 @@ private:
     stk::FreeVerb reverb;
     
     // Pitch shift variables
-    stk::PitShift shift;
+    vector<stk::PitShift> shifters;
+    
+    // Chorus
+    stk::Chorus chorus;
     
     // Smoothers
     vector<Smooth> onOff;
@@ -187,8 +190,10 @@ private:
         bool dissolving;
         
         // Sticker influence variables
-        int macros[5];
+        float macros[5];
         int repeats;
+        float delay;
+        int stutter;
         
         // Associated stickers
         vector<Sticker> stickers;
@@ -197,6 +202,7 @@ private:
         Smooth env;
     };
     vector<bool> redrawingTexture;
+    vector<int> strokesToRedraw;
     int maxStrokes;
     int maxPixelsPerStroke;
     int maxStickersPerStroke;
