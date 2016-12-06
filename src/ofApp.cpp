@@ -160,6 +160,11 @@ void ofApp::setup(){
     ofSetFrameRate(120);
 }
 
+void ofApp::exit() {
+    audioReady = false;
+    std::cout << "BYE!!!!"<< std::endl;
+}
+
 //--------------------------------------------------------------
 void ofApp::update(){
     // Get window variables
@@ -290,13 +295,11 @@ void ofApp::redrawPixels() {
                     for (int j=0; j<currStroke.playbackPixel%currStroke.length; j++) {
                         currStroke.pixels[abs(((currStroke.length-1)*reverse)-j)].draw(ww, wh);
                     }
-                    redrawLock.lock();
                     strokes[i].stutter--;
                     if (strokes[i].stutter < 0) {
                         strokes[i].playbackPixel++;
                         strokes[i].stutter = strokes[i].macros[2];
                     }
-                    redrawLock.unlock();
                 }
             }
         }
@@ -512,7 +515,6 @@ void ofApp::keyPressed(int key){
             strokes[i].redrawing = 0;
             redrawingTexture[strokes[i].textureType] = false;
         }
-        redrawLock.lock();
         if (!redraw) {
             redraw = 1;
             redrawGain = redrawSmooth.tick(redraw);
@@ -520,7 +522,6 @@ void ofApp::keyPressed(int key){
             redraw = 0;
             redrawGain = 0;
         }
-        redrawLock.unlock();
     } else if (key==127 && !redraw && !strokesToDissolve) {
         if (currentStroke != 0) {
             if (shiftKey) {
@@ -689,7 +690,7 @@ void ofApp::audioOut(float * output, int bufferSize, int nChannels){
         
         for (int i = 0; i < bufferSize; i++) {
             output[2*i] = outputFrames(i, 0)/5;
-            output[2*i+1] = outputFrames(i, 0)/5;
+            output[2*i+1] = outputFrames(i, 1)/5;
         }
     }
 }
@@ -751,7 +752,9 @@ stk::StkFrames ofApp::redrawAudio(int bufferSize) {
                         }
                         
                         for (int j = 0; j < bufferSize; j++) {
-                            outputFrames(j, 0) += outputBuffer(j, 0)*currPixel.getOpacity();
+                            outputFrames(j, 0) += outputBuffer(j, 0)*currPixel.getOpacity()*(1-yRatio);
+                            outputFrames(j, 1) += outputBuffer(j, 1)*currPixel.getOpacity()*yRatio;
+
                         }
                     }
                 }
