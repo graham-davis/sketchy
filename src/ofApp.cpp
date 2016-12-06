@@ -11,8 +11,10 @@ void ofApp::setup(){
     
     // Smoothers and gain
     onOff.resize(numTextures);
+    drawGain.resize(numTextures);
     for (int i=0; i<numTextures; i++) {
-        onOff[i].setSmooth(.8);
+        onOff[i].setSmooth(.75);
+        drawGain[i] = 0;
     }
     redrawSmooth.setSmooth(.8);
     redrawGain = 0;
@@ -289,8 +291,6 @@ void ofApp::redrawPixels() {
     }
     if (!strokesToRedraw) {
         redraw = 0;
-        
-        reverb.clear();
     }
 }
 
@@ -504,7 +504,6 @@ void ofApp::keyPressed(int key){
         } else {
             redraw = 0;
             redrawGain = 0;
-            reverb.clear();
         }
         redrawLock.unlock();
     } else if (key==127 && !redraw && !strokesToDissolve) {
@@ -590,6 +589,7 @@ void ofApp::mousePressed(int x, int y, int button){
         drawing = true;
         strokes[currentStroke].textureType = selectedTexture;
         playTexture[selectedTexture] = 1;
+        drawGain[selectedTexture] = onOff[selectedTexture].tick(playTexture[selectedTexture]);
     }
 }
 
@@ -649,33 +649,38 @@ void ofApp::dragEvent(ofDragInfo dragInfo){
 //----------------------Audio Methods---------------------------
 void ofApp::audioOut(float * output, int bufferSize, int nChannels){
     if (audioReady) {
+        stk::StkFrames outputFrames;
+        outputFrames.resize(bufferSize, 2, 0);
+        
         if (redrawGain > 0.005) {
-            redrawAudio(output, bufferSize);
+            outputFrames = redrawAudio(bufferSize);
             redrawGain = redrawSmooth.tick(redraw);
         } else if (redrawGain > 0) {
             redrawGain = 0;
-            redrawLock.lock();
-            redrawLock.unlock();
-            reverb.clear();
             shift.clear();
         } else {
-            float gain = 0;
             for (int j = 0; j < numTextures; j++) {
-                gain = onOff[j].tick(playTexture[j]);
-                if (gain > 0.01) {
-                    drawAudio(output, bufferSize, j, gain);
-                } else if (gain > 0.005) {
-                    reverb.clear();
+                if (drawGain[j] > 0.005) {
+                    outputFrames = drawAudio(bufferSize, j, drawGain[j]);
+                    drawGain[j] = onOff[j].tick(playTexture[j]);
+                } else if (drawGain[j] > 0) {
+                    drawGain[j] = 0;
                     shift.clear();
                 }
             }
         }
+        reverb.tick(outputFrames);
+        
+        for (int i = 0; i < bufferSize; i++) {
+            output[2*i] = outputFrames(i, 0)/5;
+            output[2*i+1] = outputFrames(i, 0)/5;
+        }
     }
 }
 
-void ofApp::drawAudio(float * output, int bufferSize, int j, float gain) {
-    float sample = 0;
-    outputFrames.resize(MY_BUFFERSIZE, 2, 0);
+stk::StkFrames ofApp::drawAudio(int bufferSize, int j, float gain) {
+    stk::StkFrames outputFrames;
+    outputFrames.resize(bufferSize, 2, 0);
     
     // Get granular settings
     grainSize = brushRadius*500;
@@ -693,21 +698,16 @@ void ofApp::drawAudio(float * output, int bufferSize, int j, float gain) {
     granulators[j].tick(outputFrames);
     shift.setShift(2 * yRatio);
     shift.tick(outputFrames);
-    reverb.tick(outputFrames);
 
-    for (int i = 0; i < bufferSize; i++) {
-        sample = outputFrames(i, 0)*gain*opacity;
-        output[i*2] = sample;
-        output[(i*2)+1] = sample;
-    }
+    return outputFrames;
 }
 
 
-void ofApp::redrawAudio(float * output, int bufferSize) {
-    float samples[bufferSize];
-    for (int l = 0; l < bufferSize; l++) {
-        samples[l] = 0.0;
-    }
+stk::StkFrames ofApp::redrawAudio(int bufferSize) {
+    stk::StkFrames outputBuffer;
+    outputBuffer.resize(bufferSize, 2, 0);
+    
+    stk::StkFrames outputFrames;
     outputFrames.resize(bufferSize, 2, 0);
     
     for (int i = 0; i < currentStroke; i++) {
@@ -722,28 +722,23 @@ void ofApp::redrawAudio(float * output, int bufferSize) {
                 int grainStart = granulators[pixelType].fileSize()*position[0];
                 if (pixelRadius) {
                     granulators[pixelType].setGrainParameters(pixelRadius*500, 0, 0, 0, grainStart);
-                    granulators[pixelType].tick(outputFrames);
+                    granulators[pixelType].tick(outputBuffer);
                     float yRatio = 1 - (position[1] - (topNavHeight/wh));
                     if (yRatio > 1) yRatio = 1;
                     if (yRatio < 0) yRatio = 0;
                     
                     shift.setShift(2 * yRatio);
-                    shift.tick(outputFrames);
-                    reverb.tick(outputFrames);
+                    shift.tick(outputBuffer);
 
                     for (int j = 0; j < bufferSize; j++) {
-                        samples[j] += outputFrames(j, 0)*currPixel.getOpacity()*currentGain;
+                        outputFrames(j, 0) += outputBuffer(j, 0)*currPixel.getOpacity()*currentGain;
                     }
-                }
-                
-                for (int k = 0; k < bufferSize; k++) {
-                    output[k*2] = samples[k] / numTextures;
-                    output[(k*2)+1] = samples[k] / numTextures;
                 }
             }
         }
         redrawLock.unlock();
     }
+    return outputFrames;
 }
 
 void ofApp::readFiles(){

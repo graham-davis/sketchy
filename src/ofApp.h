@@ -41,8 +41,8 @@ public:
     
 private:
 // PRIVATE MEMBER FUNCTIONS
-    void drawAudio(float *input, int bufferSize, int j, float gain);
-    void redrawAudio(float *input, int bufferSize);
+    stk::StkFrames drawAudio(int bufferSize, int j, float gain);
+    stk::StkFrames redrawAudio(int bufferSize);
     void readFiles();
     void drawTopNav();
     void drawToolbox();
@@ -69,7 +69,6 @@ private:
     
     // Reverb variables
     stk::FreeVerb reverb;
-    stk::StkFrames outputFrames;
     
     // Pitch shift variables
     stk::PitShift shift;
@@ -78,6 +77,7 @@ private:
     vector<Smooth> onOff;
     Smooth redrawSmooth;
     float redrawGain;
+    vector<float> drawGain;
     
 // WINDOW VARIABLES
     float ww;
