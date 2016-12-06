@@ -58,8 +58,8 @@ private:
     void checkNearbyStickers(Pixel *pixel);
     void clearStrokes();
     void clearSingleStroke(int index);
-    void saveFile();
-    void loadFile();
+    void saveFile(int fileNumber);
+    void loadFile(int fileNumber);
     
 // AUDIO VARIABLES
     bool audioReady;
@@ -217,6 +217,7 @@ private:
 // KEYBOARD
     
     bool shiftKey;
+    bool commandKey;
  
 // MUTEX
     

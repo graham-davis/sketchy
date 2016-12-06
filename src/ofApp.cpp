@@ -149,6 +149,7 @@ void ofApp::setup(){
 // KEYBOARD
     
     shiftKey = false;
+    commandKey = false;
     
     
 // READ AUDIO FILES
@@ -162,7 +163,7 @@ void ofApp::setup(){
 }
 
 void ofApp::exit() {
-    saveFile();
+    saveFile(0);
     audioReady = false;
 }
 
@@ -509,6 +510,8 @@ void ofApp::drawStickerbox() {
 void ofApp::keyPressed(int key){
     if (key==OF_KEY_SHIFT) {
         shiftKey = true;
+    } else if (key==OF_KEY_COMMAND) {
+        commandKey = true;
     } else if (key==32){
         for (int i = 0; i < currentStroke; i++) {
             strokes[i].redrawFinished = false;
@@ -531,10 +534,14 @@ void ofApp::keyPressed(int key){
                 clearSingleStroke(currentStroke-1);
             }
         }
-    } else if (key == 115) {
-        saveFile();
-    } else if (key == 108) {
-        loadFile();
+    } else if (key > 48 && key < 58) {
+        if (commandKey) {
+            saveFile(key-48);
+        } else {
+            loadFile(key-48);
+        }
+    } else if (key == 48) {
+        loadFile(0);
     }
 }
 
@@ -543,6 +550,8 @@ void ofApp::keyPressed(int key){
 void ofApp::keyReleased(int key){
     if (key==OF_KEY_SHIFT) {
         shiftKey = false;
+    } else if (key==OF_KEY_COMMAND) {
+        commandKey = false;
     }
 }
 
@@ -797,9 +806,11 @@ void ofApp::readFiles(){
 }
 
 
-void ofApp::saveFile() {
+void ofApp::saveFile(int fileNumber) {
     ofFile newSketch;
-    const string filepath = "sketches/lastSketch.txt";
+    const string filepath = "sketches/" + std::to_string(fileNumber) + ".txt";
+    std::cout << filepath << std::endl;
+
     newSketch.open(ofToDataPath(filepath), ofFile::ReadWrite, false);
     
     ofBuffer sketchBuffer;
@@ -820,14 +831,14 @@ void ofApp::saveFile() {
     ofBufferToFile(filepath, sketchBuffer);
 }
 
-void ofApp::loadFile() {
+void ofApp::loadFile(int fileNumber) {
     for (int i = 0; i < currentStroke; i++) {
         resetStroke(i);
     }
     currentStroke = 0;
     
     vector<string> fileStrokes;
-    const string filepath = "sketches/lastSketch.txt";
+    const string filepath = "sketches/" + std::to_string(fileNumber) + ".txt";
     ofBuffer buffer = ofBufferFromFile(ofToDataPath(filepath));
     for (auto line : buffer.getLines()){
         fileStrokes.push_back(line);
