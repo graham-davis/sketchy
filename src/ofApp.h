@@ -179,7 +179,7 @@ private:
         int textureType;
         
         // Redraw and playback
-        bool redrawing;
+        int redrawing;
         bool redrawFinished;
         int playbackPixel;
 
@@ -188,10 +188,13 @@ private:
         
         // Sticker influence variables
         int macros[5];
+        int repeats;
         
         // Associated stickers
         vector<Sticker> stickers;
         int numStickers;
+        
+        Smooth env;
     };
     vector<bool> redrawingTexture;
     int maxStrokes;

@@ -14,7 +14,7 @@ void ofApp::setup(){
     for (int i=0; i<numTextures; i++) {
         onOff[i].setSmooth(.8);
     }
-    redrawSmooth.setSmooth(.75);
+    redrawSmooth.setSmooth(.8);
     redrawGain = 0;
     
     // Reverb
@@ -179,7 +179,7 @@ void ofApp::update(){
     }
     
     // Add new pixel if currently drawing and not dissolving or redrawing previous strokes
-    if (drawing && !strokesToDissolve && !redraw) {
+    if (drawing && !strokesToDissolve && !redraw && mouseX/ww >= 0 && mouseX/ww < 1) {
         
         // Create new Pixel
         Pixel newPixel;
@@ -256,7 +256,7 @@ void ofApp::redrawPixels() {
             strokesToRedraw = true;
             
             if (!currStroke.redrawing && !redrawingTexture[currStroke.textureType]) {
-                strokes[i].redrawing = true;
+                strokes[i].redrawing = 1;
                 redrawingTexture[currStroke.textureType] = true;
             }
         } else {
@@ -264,10 +264,19 @@ void ofApp::redrawPixels() {
         }
         if (currStroke.redrawing) {
             if (currStroke.playbackPixel == currStroke.length) {
+                if (currStroke.macros[4]) {
+                    strokes[i].playbackPixel = 0;
+                    strokes[i].macros[4]--;
+                    strokes[i].repeats++;
+                } else {
+                    strokes[i].macros[4] = strokes[i].repeats;
+                    strokes[i].repeats = 0;
+                    strokes[i].redrawFinished = true;
+                    strokes[i].redrawing = 0;
+                    strokes[i].playbackPixel--;
+                    redrawingTexture[currStroke.textureType] = false;
+                }
                 drawStroke(i);
-                strokes[i].redrawFinished = true;
-                strokes[i].redrawing = false;
-                redrawingTexture[currStroke.textureType] = false;
             } else {
                 for (int j=0; j<currStroke.playbackPixel; j++) {
                     currStroke.pixels[j].draw(ww, wh);
@@ -319,6 +328,9 @@ void ofApp::resetStroke(int index) {
     strokes[index].stickers.clear();
     strokes[index].stickers.resize(maxStickersPerStroke);
     strokes[index].numStickers = 0;
+    
+    strokes[index].env.setSmooth(0.75);
+    strokes[index].repeats = 0;
     
     strokes[index].dissolving = false;
     for (int i = 0; i < 5; i++) {
@@ -483,7 +495,7 @@ void ofApp::keyPressed(int key){
         for (int i = 0; i < currentStroke; i++) {
             strokes[i].redrawFinished = false;
             strokes[i].playbackPixel = 0;
-            strokes[i].redrawing = false;
+            strokes[i].redrawing = 0;
         }
         redrawLock.lock();
         if (!redraw) {
@@ -700,6 +712,7 @@ void ofApp::redrawAudio(float * output, int bufferSize) {
     
     for (int i = 0; i < currentStroke; i++) {
         redrawLock.lock();
+        float currentGain = strokes[i].env.tick(strokes[i].redrawing);
         if (strokes[i].redrawing) {
             Pixel currPixel = strokes[i].pixels[strokes[i].playbackPixel];
             int pixelType = currPixel.getType();
@@ -717,18 +730,19 @@ void ofApp::redrawAudio(float * output, int bufferSize) {
                     shift.setShift(2 * yRatio);
                     shift.tick(outputFrames);
                     reverb.tick(outputFrames);
+
                     for (int j = 0; j < bufferSize; j++) {
-                        samples[j] += outputFrames(j, 0)*currPixel.getOpacity()*redrawGain;
+                        samples[j] += outputFrames(j, 0)*currPixel.getOpacity()*currentGain;
                     }
+                }
+                
+                for (int k = 0; k < bufferSize; k++) {
+                    output[k*2] = samples[k] / numTextures;
+                    output[(k*2)+1] = samples[k] / numTextures;
                 }
             }
         }
         redrawLock.unlock();
-    }
-    
-    for (int k = 0; k < bufferSize; k++) {
-        output[k*2] = (samples[k]) / numTextures;
-        output[(k*2)+1] = (samples[k]) / numTextures;
     }
 }
 
