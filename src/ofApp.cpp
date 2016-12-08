@@ -808,7 +808,6 @@ void ofApp::readFiles(){
 void ofApp::saveFile(int fileNumber) {
     ofFile newSketch;
     const string filepath = "sketches/" + std::to_string(fileNumber) + ".txt";
-    std::cout << filepath << std::endl;
 
     newSketch.open(ofToDataPath(filepath), ofFile::ReadWrite, false);
     

@@ -8,6 +8,7 @@
 #include "FaustReverb.h"
 #include "smooth.h"
 #include "ofGLRenderer.h"
+#include "myGranulator.h"
 
 //-----------------------------------------------------------------------------
 // Preprocessor definitions
@@ -66,7 +67,7 @@ private:
     ofSoundStream soundStream;
     
     // Granular variables
-    vector<stk::Granulate> granulators;
+    vector<stk::myGranulator> granulators;
     float grainSize;
     int grainStart;
     
