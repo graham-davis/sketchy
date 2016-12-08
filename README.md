@@ -5,7 +5,13 @@ Sketchy expands the creative potential of drawing and sketching into the auditor
 
 ![Demo Screenshot](https://github.com/graham-davis/sketchy/blob/master/bin/screenshots/demo.png "Sketchy")
 
-##Visual Features
+##Running Sketchy
+Sketchy was built using OpenFrameworks. To run sketchy on your own system, clone this directory into your 
+OpenFrameworks/apps/myApps directory. Similarly, make sure that you have the ofxStk addon in your OpenFrameworks/addons
+directory (source code found [here](https://github.com/Ahbee/ofxStk)). Now, the Sketchy source code should 
+compile without any problems.
+
+##Brush and Canvas Settings
 The settings menu (which can be toggled with the settings icon) allows users to customize their drawing brush and
 add other items to the canvas.
 <ul>
@@ -14,6 +20,9 @@ add other items to the canvas.
 <li>Stickers</li>
 <li>Grid mode</li>
 </ul>
+
+![Settings Screenshot](https://github.com/graham-davis/sketchy/blob/master/bin/screenshots/settings.png "Sketchy")
+
 
 ##Granular Synthesis Mappings
 As the user draws, characteristics of their brush stroke determine the auditory feedback produced by the STK 
@@ -36,6 +45,8 @@ A number of stickers can be added to the canvas, each influencing stroke playbac
 <li>Spiral : Plays stroke backwards</li>
 </ul>
 
+![Stickers Screenshot](https://github.com/graham-davis/sketchy/blob/master/bin/screenshots/stickers.png "Sketchy")
+
 ##Interaction and Playback
 Playback of the current canvas, deletion of strokes and saving functionality are controlled through the keyboard. 
 <ul>
@@ -45,3 +56,7 @@ Playback of the current canvas, deletion of strokes and saving functionality are
 <li>Command+[1-9] : Save current canvas</li>
 <li>[1-9] : Load saved canvas
 </ul>
+
+##More Information
+For more information, visit the application's [CCRMA webpage](https://ccrma.stanford.edu/~gbdavis/sketchy) or check out
+a demo video [here](...)!
