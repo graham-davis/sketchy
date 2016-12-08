@@ -5,7 +5,6 @@
 #include "math.h"
 #include "pixel.h"
 #include "Sticker.h"
-#include "FaustReverb.h"
 #include "smooth.h"
 #include "ofGLRenderer.h"
 #include "myGranulator.h"
