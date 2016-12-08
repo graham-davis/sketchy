@@ -60,3 +60,10 @@ Playback of the current canvas, deletion of strokes and saving functionality are
 ##More Information
 For more information, visit the application's [CCRMA webpage](https://ccrma.stanford.edu/~gbdavis/sketchy) or check out
 a demo video [here](...)!
+
+####Resources Used
+<ul>
+<li><a href="http://openframeworks.cc/">OpenFrameworks</a></li>
+<li>STK : Granular Synthesis, FreeVerb, Chorus, Pitch Shift (<a href = "https://ccrma.stanford.edu/~gbdavis/sketchy">CCRMA webpage</a>, <a href="https://github.com/Ahbee/ofxStk">Addon</a>)</li>
+<li>All audio files came from <a href="https://www.freesound.org/">Free Sound</a>.</li>
+</ul>
