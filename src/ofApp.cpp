@@ -346,7 +346,6 @@ void ofApp::resetStroke(int index) {
     strokes[index].stickers.resize(maxStickersPerStroke);
     strokes[index].numStickers = 0;
     
-    strokes[index].env.setSmooth(0.75);
     strokes[index].repeats = 0;
     strokes[index].delay = 0;
     strokes[index].stutter = 0;

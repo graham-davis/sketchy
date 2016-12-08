@@ -201,8 +201,6 @@ private:
         // Associated stickers
         vector<Sticker> stickers;
         int numStickers;
-        
-        Smooth env;
     };
     vector<bool> redrawingTexture;
     vector<int> strokesToRedraw;
@@ -218,8 +216,4 @@ private:
     
     bool shiftKey;
     bool commandKey;
- 
-// MUTEX
-    
-    mutex redrawLock;
 };
