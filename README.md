@@ -64,6 +64,6 @@ a demo video [here](https://youtu.be/qnZP2cdjrlI)!
 ####Resources Used
 <ul>
 <li><a href="http://openframeworks.cc/">OpenFrameworks</a></li>
-<li>STK : Granular Synthesis, FreeVerb, Chorus, Pitch Shift (<a href = "https://ccrma.stanford.edu/~gbdavis/sketchy">CCRMA webpage</a>, <a href="https://github.com/Ahbee/ofxStk">Addon</a>)</li>
+<li>STK : Granular Synthesis, FreeVerb, Chorus, Pitch Shift (<a href = "https://ccrma.stanford.edu/software/stk/">CCRMA webpage</a>, <a href="https://github.com/Ahbee/ofxStk">Addon</a>)</li>
 <li>All audio files came from <a href="https://www.freesound.org/">Free Sound</a>.</li>
 </ul>
