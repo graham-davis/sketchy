@@ -59,7 +59,7 @@ Playback of the current canvas, deletion of strokes and saving functionality are
 
 ##More Information
 For more information, visit the application's [CCRMA webpage](https://ccrma.stanford.edu/~gbdavis/sketchy) or check out
-a demo video [here](...)!
+a demo video [here](https://youtu.be/qnZP2cdjrlI)!
 
 ####Resources Used
 <ul>
